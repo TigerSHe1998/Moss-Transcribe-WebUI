@@ -150,6 +150,13 @@ class Engine:
         self.model_path = Path(model_path)
         self.upload_dir = Path(upload_dir)
         self.upload_dir.mkdir(parents=True, exist_ok=True)
+        # 任务状态只存内存：重启后历史任务已不存在，清掉残留的上传文件
+        for leftover in self.upload_dir.iterdir():
+            if leftover.is_file():
+                try:
+                    leftover.unlink()
+                except OSError as e:
+                    log.warning("清理残留上传文件失败 %s: %s", leftover, e)
 
         self._jobs: dict[str, Job] = {}
         self._order: list[str] = []  # 提交顺序（旧→新）

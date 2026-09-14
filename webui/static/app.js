@@ -70,12 +70,22 @@ function fmtMsZh(ms) {
   return `${sec} 秒`;
 }
 
-function speakerColor(id) {
-  return SPEAKER_COLORS[(id ?? 0) % SPEAKER_COLORS.length];
+// 后端 speaker_id 从 1 起且可能不连续；按出现顺序映射为 1..N 的连续显示编号
+function buildSpeakerMap(r) {
+  const ids = new Set(r.segments.map((s) => s.speaker_id));
+  for (const s of r.speaker_segments || []) ids.add(s.speaker_id);
+  const map = new Map();
+  [...ids].filter((id) => id >= 0).sort((a, b) => a - b)
+    .forEach((id, i) => map.set(id, i + 1));
+  return map;
 }
 
-function speakerName(id) {
-  return `说话人 ${id + 1}`;
+function speakerColor(num) {
+  return SPEAKER_COLORS[(num - 1) % SPEAKER_COLORS.length];
+}
+
+function speakerName(map, id) {
+  return `说话人 ${map.get(id) ?? id}`;
 }
 
 // ---- 轮询 ----
@@ -95,7 +105,7 @@ async function poll() {
   }
   const busy = (status?.model?.state !== 'ready')
     || jobs.some((j) => ['queued', 'converting', 'running'].includes(j.status));
-  pollTimer = setTimeout(poll, busy ? 1000 : 4000);
+  pollTimer = setTimeout(poll, busy ? 1000 : 2000);
 }
 
 function pollNow() {
@@ -111,8 +121,13 @@ function renderStatus() {
   chip.className = 'chip ' + m.state;
 
   if (m.state === 'ready' && m.device) {
-    const free = m.device.memory_free ? ` · 空闲 ${fmtBytes(m.device.memory_free)}` : '';
-    chip.textContent = `● 已就绪 · ${m.device.name}${free}`;
+    const d = m.device;
+    let mem = '';
+    if (d.memory_total) {
+      const used = Math.max(d.memory_total - d.memory_free, 0);
+      mem = ` · 总 ${fmtBytes(d.memory_total)} · 已用 ${fmtBytes(used)} · 可用 ${fmtBytes(d.memory_free)}`;
+    }
+    chip.textContent = `● 已就绪 · ${d.name}${mem}`;
   } else if (m.state === 'loading') {
     chip.innerHTML = '<span class="spin"></span>模型加载中…';
   } else {
@@ -234,10 +249,50 @@ async function switchDevice() {
 }
 
 // ---- 任务渲染 ----
+// 键控增量渲染：内容未变的卡片复用已有 DOM。整体 innerHTML 重建会重置
+// 分段列表的滚动位置（曾经的 bug），且打断用户阅读。
+const jobEls = new Map(); // job id -> { el, sig }
+
+function jobSig(j) {
+  return JSON.stringify([j.status, j.detail, j.error, j.queue_position,
+    j.audio_ms, j.result ? j.result.segments.length : -1]);
+}
 
 function renderJobs() {
   const wrap = $('jobs');
-  wrap.innerHTML = jobs.map(jobCard).join('');
+  const seen = new Set();
+  for (const j of jobs) {
+    seen.add(j.id);
+    const sig = jobSig(j);
+    let entry = jobEls.get(j.id);
+    if (!entry || entry.sig !== sig) {
+      const holder = document.createElement('div');
+      holder.innerHTML = jobCard(j);
+      const card = holder.firstElementChild;
+      if (entry) entry.el.replaceWith(card);
+      else wrap.appendChild(card);
+      entry = { el: card, sig };
+      jobEls.set(j.id, entry);
+    } else {
+      // 已用时是唯一每秒变化的字段，单独更新文本节点
+      const elapsed = entry.el.querySelector('[data-elapsed]');
+      if (elapsed && j.started) {
+        elapsed.textContent = fmtSec((Date.now() / 1000) - j.started);
+      }
+    }
+  }
+  for (const [id, entry] of jobEls) {
+    if (!seen.has(id)) {
+      entry.el.remove();
+      jobEls.delete(id);
+    }
+  }
+  // 顺序变化时才移动节点（移动不重置滚动）
+  const current = [...wrap.children];
+  const desired = jobs.map((j) => jobEls.get(j.id)?.el).filter(Boolean);
+  if (desired.length === current.length && desired.some((el, i) => el !== current[i])) {
+    for (const el of desired) wrap.appendChild(el);
+  }
 }
 
 function jobCard(j) {
@@ -248,7 +303,9 @@ function jobCard(j) {
 
   const meta = [];
   if (j.audio_ms) meta.push(`时长 ${fmtMsZh(j.audio_ms)}`);
-  if (j.status === 'running' && j.started) meta.push(`已用时 ${fmtSec((Date.now() / 1000) - j.started)}`);
+  if (j.status === 'running' && j.started) {
+    meta.push({ html: `已用时 <span data-elapsed>${fmtSec((Date.now() / 1000) - j.started)}</span>` });
+  }
   if (j.status === 'done' && j.started && j.finished) meta.push(`耗时 ${fmtSec(j.finished - j.started)}`);
   meta.push(`${LANG_LABEL[j.params.language] || j.params.language} · ${j.params.diarize === 'on' ? '说话人分离' : '无分离'}`);
 
@@ -263,7 +320,7 @@ function jobCard(j) {
       <span class="badge ${j.status}">${esc(badgeText)}</span>
       ${actions}
     </div>
-    <div class="job-meta">${meta.map((m) => `<span class="dot">${esc(m)}</span>`).join('')}</div>
+    <div class="job-meta">${meta.map((m) => `<span class="dot">${typeof m === 'string' ? esc(m) : m.html}</span>`).join('')}</div>
     ${j.error ? `<div class="error-box">${esc(j.error)}</div>` : ''}
     ${j.result ? resultBlock(j) : ''}
   </div>`;
@@ -272,11 +329,11 @@ function jobCard(j) {
 function resultBlock(j) {
   const r = j.result;
   const withDiarize = j.params.diarize === 'on';
-  const speakers = new Set(r.segments.map((s) => s.speaker_id));
+  const spMap = buildSpeakerMap(r);
 
   const meta = [
     `${r.segments.length} 段`,
-    withDiarize ? `${speakers.size} 位说话人` : null,
+    withDiarize && spMap.size ? `${spMap.size} 位说话人` : null,
     `解码 ${(r.timings.decode_ms / 1000).toFixed(1)}s`,
     `编码 ${(r.timings.encode_ms / 1000).toFixed(1)}s`,
   ].filter(Boolean).join(' · ');
@@ -284,7 +341,7 @@ function resultBlock(j) {
   const segs = r.segments.length ? r.segments.map((s) => `
     <div class="seg">
       <span class="seg-time">${fmtClock(s.t0_ms)} → ${fmtClock(s.t1_ms)}</span>
-      ${withDiarize ? `<span class="seg-speaker" style="--sp:${speakerColor(s.speaker_id)}">${esc(speakerName(s.speaker_id))}</span>` : ''}
+      ${withDiarize ? `<span class="seg-speaker" style="--sp:${speakerColor(spMap.get(s.speaker_id) ?? 1)}">${esc(speakerName(spMap, s.speaker_id))}</span>` : ''}
       <span class="seg-text">${esc(s.text)}</span>
     </div>`).join('')
     : `<div class="seg"><span class="seg-text">${esc(r.text)}</span></div>`;
@@ -292,7 +349,7 @@ function resultBlock(j) {
   return `
   <div class="result">
     <div class="result-meta">${esc(LANG_LABEL[j.params.language] || j.params.language)} · ${esc(meta)}${j.detail ? ` · ${esc(j.detail)}` : ''}</div>
-    ${withDiarize ? timeline(r) : ''}
+    ${withDiarize ? timeline(r, spMap) : ''}
     <div class="result-actions">
       <button class="btn mini" data-action="copy">复制全文</button>
       <button class="btn mini" data-action="txt">下载 TXT</button>
@@ -303,7 +360,7 @@ function resultBlock(j) {
   </div>`;
 }
 
-function timeline(r) {
+function timeline(r, spMap) {
   const segs = r.speaker_segments || [];
   if (!segs.length) return '';
   const dur = Math.max(...segs.map((s) => s.t1_ms), 1);
@@ -312,27 +369,32 @@ function timeline(r) {
     if (!rows.has(s.speaker_id)) rows.set(s.speaker_id, []);
     rows.get(s.speaker_id).push(s);
   }
-  const bars = [...rows.entries()].sort((a, b) => a[0] - b[0]).map(([sid, list]) => `
+  const bars = [...rows.entries()].sort((a, b) => a[0] - b[0]).map(([sid, list]) => {
+    const num = spMap.get(sid) ?? 1;
+    return `
     <div class="tl-row">
-      <div class="tl-label">${esc(speakerName(sid))}</div>
+      <div class="tl-label">${esc(speakerName(spMap, sid))}</div>
       <div class="tl-track">${list.map((s) =>
-        `<div class="tl-bar" style="left:${(s.t0_ms / dur * 100).toFixed(2)}%;width:${Math.max((s.t1_ms - s.t0_ms) / dur * 100, 0.3).toFixed(2)}%;background:${speakerColor(sid)}"
+        `<div class="tl-bar" style="left:${(s.t0_ms / dur * 100).toFixed(2)}%;width:${Math.max((s.t1_ms - s.t0_ms) / dur * 100, 0.3).toFixed(2)}%;background:${speakerColor(num)}"
               title="${fmtClock(s.t0_ms)} – ${fmtClock(s.t1_ms)}${s.p != null ? `（置信度 ${(s.p * 100).toFixed(0)}%）` : ''}"></div>`).join('')}</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   return `<div class="timeline">${bars}</div>`;
 }
 
 // ---- 导出 ----
 
-function segLine(s, withDiarize) {
+function segLine(s, withDiarize, spMap) {
   const time = `[${fmtClock(s.t0_ms)} → ${fmtClock(s.t1_ms)}]`;
-  const sp = withDiarize ? `${speakerName(s.speaker_id)}: ` : '';
+  const sp = withDiarize ? `${speakerName(spMap, s.speaker_id)}: ` : '';
   return `${time} ${sp}${s.text}`;
 }
 
 function fullText(j) {
   if (!j.result.segments.length) return j.result.text;
-  return j.result.segments.map((s) => segLine(s, j.params.diarize === 'on')).join('\n');
+  const withDiarize = j.params.diarize === 'on';
+  const spMap = buildSpeakerMap(j.result);
+  return j.result.segments.map((s) => segLine(s, withDiarize, spMap)).join('\n');
 }
 
 function srtTime(ms) {
@@ -343,8 +405,9 @@ function srtTime(ms) {
 
 function toSRT(j) {
   const withDiarize = j.params.diarize === 'on';
+  const spMap = buildSpeakerMap(j.result);
   return j.result.segments.map((s, i) => {
-    const sp = withDiarize ? `${speakerName(s.speaker_id)}: ` : '';
+    const sp = withDiarize ? `${speakerName(spMap, s.speaker_id)}: ` : '';
     return `${i + 1}\n${srtTime(s.t0_ms)} --> ${srtTime(s.t1_ms)}\n${sp}${s.text}\n`;
   }).join('\n');
 }
