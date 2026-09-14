@@ -68,7 +68,7 @@ header h1 { font-size: 18px; margin: 0; }
   position: absolute;
   inset: 0 auto 0 0;
   width: 0;
-  background: var(--accent);
+  background: var(--green);
   transition: width .6s ease;
 }
 .mem-fill.warn { background: var(--amber); }

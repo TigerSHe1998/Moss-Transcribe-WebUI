@@ -134,8 +134,7 @@ function renderMemBar(device) {
 }
 
 function fmtGiB(n) {
-  const gib = n / 1024 ** 3;
-  return (gib >= 10 ? gib.toFixed(0) : gib.toFixed(1)) + 'G';
+  return (n / 1024 ** 3).toFixed(2) + 'G';
 }
 
 function renderStatus() {
