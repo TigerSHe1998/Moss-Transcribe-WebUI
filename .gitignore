@@ -1,0 +1,15 @@
+# 虚拟环境
+.venv/
+
+# 二进制安装包
+*.whl
+
+# 测试音频（大二进制文件，不入库）
+test/*.wav
+
+# 个人笔记，不入库
+transcribe_cpp_notes.txt
+
+# Python 缓存
+__pycache__/
+*.pyc
