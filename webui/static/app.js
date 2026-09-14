@@ -115,23 +115,43 @@ function pollNow() {
 
 // ---- 状态与设置面板 ----
 
+// 顶栏显存进度条：device 为 null 时隐藏（模型未就绪/加载中无归属设备）
+function renderMemBar(device) {
+  const bar = $('mem-bar');
+  if (!device || !device.memory_total) {
+    bar.hidden = true;
+    return;
+  }
+  bar.hidden = false;
+  const used = Math.max(device.memory_total - device.memory_free, 0);
+  const pct = Math.min(used / device.memory_total * 100, 100);
+  const fill = $('mem-fill');
+  fill.style.width = pct.toFixed(1) + '%';
+  fill.classList.toggle('warn', pct >= 70 && pct < 90);
+  fill.classList.toggle('crit', pct >= 90);
+  $('mem-text').textContent = `已用 ${fmtGiB(used)} / ${fmtGiB(device.memory_total)}`;
+  bar.title = `${device.name} · 可用 ${fmtGiB(device.memory_free)} (${pct.toFixed(0)}% 已用)`;
+}
+
+function fmtGiB(n) {
+  const gib = n / 1024 ** 3;
+  return (gib >= 10 ? gib.toFixed(0) : gib.toFixed(1)) + 'G';
+}
+
 function renderStatus() {
   const m = status.model;
   const chip = $('model-chip');
   chip.className = 'chip ' + m.state;
 
   if (m.state === 'ready' && m.device) {
-    const d = m.device;
-    let mem = '';
-    if (d.memory_total) {
-      const used = Math.max(d.memory_total - d.memory_free, 0);
-      mem = ` · 总 ${fmtBytes(d.memory_total)} · 已用 ${fmtBytes(used)} · 可用 ${fmtBytes(d.memory_free)}`;
-    }
-    chip.textContent = `● 已就绪 · ${d.name}${mem}`;
+    chip.textContent = `● 已就绪 · ${m.device.name}`;
+    renderMemBar(m.device);
   } else if (m.state === 'loading') {
     chip.innerHTML = '<span class="spin"></span>模型加载中…';
+    renderMemBar(null);
   } else {
     chip.textContent = `✕ 模型不可用: ${m.error || '未知错误'}`;
+    renderMemBar(null);
   }
 
   // 设备下拉：仅在设备列表变化时重建，避免打断用户选择
