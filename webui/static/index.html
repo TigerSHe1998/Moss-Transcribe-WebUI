@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moss 转录 WebUI</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>🎙️ Moss 转录 WebUI</h1>
+  <div id="model-chip" class="chip loading">初始化…</div>
+</header>
+
+<main>
+  <aside>
+    <div class="card">
+      <h2>推理设备</h2>
+      <label class="field">设备
+        <select id="device-select">
+          <option value="auto">自动选择</option>
+        </select>
+      </label>
+      <button id="reload-btn" class="btn secondary">切换设备（重载模型）</button>
+      <p id="device-note" class="note"></p>
+    </div>
+
+    <div class="card">
+      <h2>转录设置</h2>
+      <label class="field">语言
+        <select id="opt-language">
+          <option value="zh">中文 (zh)</option>
+          <option value="en">English (en)</option>
+        </select>
+      </label>
+      <label class="field">时间戳
+        <select id="opt-timestamps">
+          <option value="segment">分段</option>
+          <option value="auto">自动</option>
+          <option value="none">无</option>
+        </select>
+      </label>
+      <label class="field">说话人分离
+        <select id="opt-diarize">
+          <option value="on">开启</option>
+          <option value="off">关闭</option>
+        </select>
+      </label>
+      <details>
+        <summary>高级设置</summary>
+        <label class="field">KV 缓存类型
+          <select id="opt-kv">
+            <option value="auto">auto</option>
+            <option value="f32">f32</option>
+            <option value="f16">f16</option>
+          </select>
+        </label>
+        <label class="field">CPU 线程数（0 = 默认）
+          <input id="opt-threads" type="number" min="0" max="128" value="0">
+        </label>
+        <label class="field">上下文长度 n_ctx（0 = 默认）
+          <input id="opt-ctx" type="number" min="0" step="256" value="0">
+        </label>
+        <label class="field check">
+          <input id="opt-special" type="checkbox"> 保留特殊标记
+        </label>
+        <p class="note">调小 n_ctx 会降低单次音频的时长上限；线程数仅在 CPU 后端生效。</p>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>运行信息</h2>
+      <div id="info-body" class="note">—</div>
+    </div>
+  </aside>
+
+  <section id="content">
+    <div class="card" id="upload-card">
+      <h2>上传媒体</h2>
+      <div id="dropzone" tabindex="0">
+        <div class="dz-title">拖拽文件到此处，或点击选择</div>
+        <div class="dz-hint" id="dz-hint"></div>
+        <input id="file-input" type="file"
+               accept="audio/*,video/*,.wav,.mp3,.m4a,.flac,.ogg,.opus,.aac,.wma,.mp4,.mkv,.webm,.mov,.avi"
+               hidden>
+      </div>
+      <div id="file-chip" class="file-chip" hidden>
+        <span id="file-name"></span>
+        <span id="file-size" class="muted"></span>
+        <button id="file-clear" class="btn tiny" title="移除">✕</button>
+      </div>
+      <button id="start-btn" class="btn primary" disabled>开始转录</button>
+    </div>
+
+    <div id="jobs"></div>
+  </section>
+</main>
+
+<div id="toast" hidden></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

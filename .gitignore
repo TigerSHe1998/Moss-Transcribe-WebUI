@@ -13,3 +13,6 @@ transcribe_cpp_notes.txt
 # Python 缓存
 __pycache__/
 *.pyc
+
+# WebUI 运行时产生的上传文件
+uploads/
