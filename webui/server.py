@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import logging
 import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import uvicorn
@@ -43,13 +44,15 @@ class ModelRequest(BaseModel):
 
 def create_app(model_path: str, backend: str = "auto",
                device_index: int | None = None) -> FastAPI:
-    app = FastAPI(title="Moss 转录 WebUI")
     engine = Engine(model_path)
-    app.state.engine = engine
 
-    @app.on_event("startup")
-    def _start() -> None:
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
         engine.start(backend, device_index)
+        yield
+
+    app = FastAPI(title="Moss 转录 WebUI", lifespan=lifespan)
+    app.state.engine = engine
 
     # ---- 页面与状态 ----
 
