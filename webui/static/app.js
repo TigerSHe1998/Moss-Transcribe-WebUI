@@ -595,19 +595,20 @@ function timeline(r, spMap, ms = false) {
 }
 
 // ---- 导出 ----
+// ms：跟随结果卡片的毫秒开关（按钮所在卡片的 data-ms）
 
-function segLine(s, withDiarize, spMap, noTs) {
-  const time = noTs ? '' : `[${fmtClock(s.t0_ms)} → ${fmtClock(s.t1_ms)}] `;
+function segLine(s, withDiarize, spMap, noTs, ms = false) {
+  const time = noTs ? '' : `[${fmtClockMs(s.t0_ms, ms)} → ${fmtClockMs(s.t1_ms, ms)}] `;
   const sp = withDiarize ? `${speakerName(spMap, s.speaker_id)}: ` : '';
   return `${time}${sp}${s.text}`;
 }
 
-function fullText(j) {
+function fullText(j, ms = false) {
   if (!j.result.segments.length) return j.result.text;
   const withDiarize = j.params.diarize === 'on';
   const noTs = j.params.timestamps === 'none';
   const spMap = buildSpeakerMap(j.result);
-  return j.result.segments.map((s) => segLine(s, withDiarize, spMap, noTs)).join('\n');
+  return j.result.segments.map((s) => segLine(s, withDiarize, spMap, noTs, ms)).join('\n');
 }
 
 function srtTime(ms) {
@@ -670,11 +671,11 @@ $('jobs').addEventListener('click', async (e) => {
         await api(`/api/jobs/${id}/delete`, { method: 'POST' });
         break;
       case 'copy':
-        await navigator.clipboard.writeText(fullText(job));
+        await navigator.clipboard.writeText(fullText(job, btn.closest('.result')?.querySelector('.ms-toggle')?.dataset.ms === '1'));
         toast('已复制到剪贴板');
         break;
       case 'txt':
-        download(`${baseName(job)}.txt`, fullText(job));
+        download(`${baseName(job)}.txt`, fullText(job, btn.closest('.result')?.querySelector('.ms-toggle')?.dataset.ms === '1'));
         break;
       case 'srt':
         download(`${baseName(job)}.srt`, toSRT(job));
