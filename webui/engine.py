@@ -38,17 +38,30 @@ KV_CHOICES = ("auto", "f32", "f16")
 
 # --- 音频工具 ---------------------------------------------------------------
 
+# 随仓库分发的 ffmpeg/ffprobe（用户放到 resources/ffmpeg/，gitignore）；
+# 不存在时回落系统 PATH
+_BUNDLED_DIR = Path(__file__).resolve().parent.parent / "resources" / "ffmpeg"
+
+
+def find_tool(name: str) -> Optional[str]:
+    """解析 ffmpeg/ffprobe 可执行文件：resources/ffmpeg/ 优先，回落 PATH。"""
+    local = _BUNDLED_DIR / f"{name}.exe"
+    if local.is_file():
+        return str(local)
+    return shutil.which(name)
+
 
 def ffmpeg_available() -> bool:
-    return shutil.which("ffmpeg") is not None
+    return find_tool("ffmpeg") is not None
 
 
 def probe_duration_ms(path: Path) -> Optional[int]:
     """ffprobe 读取媒体时长（毫秒）；无 ffprobe 或失败返回 None。"""
-    if shutil.which("ffprobe") is None:
+    exe = find_tool("ffprobe")
+    if exe is None:
         return None
     cmd = [
-        "ffprobe", "-v", "error", "-show_entries", "format=duration",
+        exe, "-v", "error", "-show_entries", "format=duration",
         "-of", "json", str(path),
     ]
     try:
@@ -62,9 +75,10 @@ def probe_duration_ms(path: Path) -> Optional[int]:
 def load_pcm(path: Path) -> np.ndarray:
     """任意媒体 → 16kHz 单声道 float32。有 ffmpeg 走转码（含视频抽音轨、
     重采样、下混）；无 ffmpeg 时仅支持 16kHz/16-bit/mono PCM WAV。"""
-    if ffmpeg_available():
+    exe = find_tool("ffmpeg")
+    if exe is not None:
         cmd = [
-            "ffmpeg", "-v", "error", "-y", "-i", str(path),
+            exe, "-v", "error", "-y", "-i", str(path),
             "-vn", "-sn", "-dn", "-ar", str(SAMPLE_RATE), "-ac", "1",
             "-f", "f32le", "pipe:1",
         ]
@@ -311,12 +325,16 @@ class Engine:
             active = sum(1 for j in self._jobs.values()
                          if j.status in ("queued", "converting", "running"))
 
+        ffmpeg_src = find_tool("ffmpeg")
         return {
             "model": model,
             "capabilities": caps,
             "limits": self._limits,
             "devices": devices,
-            "ffmpeg": ffmpeg_available(),
+            "ffmpeg": ffmpeg_src is not None,
+            # ffmpeg 来源：bundled=resources/ffmpeg/，path=系统 PATH，None=不可用
+            "ffmpeg_source": ("bundled" if ffmpeg_src and str(_BUNDLED_DIR) in ffmpeg_src
+                              else "path" if ffmpeg_src else None),
             "active_jobs": active,
             "version": tc.__version__,
             "native_version": tc.native_version(),
