@@ -26,7 +26,8 @@ from engine import Engine, fmt_ms, probe_duration_ms
 
 logger = logging.getLogger("webui")
 
-DEFAULT_MODEL = r"C:\AI\models\asr\MOSS-Transcribe-Diarize-Q8_0.gguf"
+# 默认模型：工程目录 model/ 下（gitignore，不入库）；可用 --model 指定其他路径
+DEFAULT_MODEL = str(Path(__file__).resolve().parent.parent / "model" / "MOSS-Transcribe-Diarize-Q8_0.gguf")
 MAX_UPLOAD_BYTES = 2 * 1024**3
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -177,7 +178,7 @@ def main() -> None:
     parser.add_argument("--host", default="127.0.0.1",
                         help="监听地址；局域网访问用 0.0.0.0（默认 127.0.0.1）")
     parser.add_argument("--port", type=int, default=8390)
-    parser.add_argument("--model", default=DEFAULT_MODEL, help="GGUF 模型路径")
+    parser.add_argument("-m", "--model", default=DEFAULT_MODEL, help="GGUF 模型路径")
     parser.add_argument("--backend", default="auto",
                         choices=["auto", "cpu", "metal", "vulkan", "cpu_accel", "cuda", "rocm"])
     parser.add_argument("--device-index", type=int, default=None,

@@ -7,6 +7,9 @@
 # 测试音频（大二进制文件，不入库）
 test/*.wav
 
+# 模型权重（GB 级大文件，不入库；放工程目录 model/ 下）
+model/
+
 # 个人笔记，不入库
 transcribe_cpp_notes.txt
 
