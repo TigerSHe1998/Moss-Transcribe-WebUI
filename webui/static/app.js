@@ -418,54 +418,20 @@ function wirePlayer(card, j) {
     segEls.forEach((el) => el.classList.remove('active'));
   });
 
-  // 毫秒开关（label+checkbox toggle）：切换精度后整体重建卡片（时间列/
-  // 悬浮提示/导出格式都要换），保持分段列表滚动位置与播放进度
+  // 毫秒开关：只改写时间文本（DOM 不动，播放/滚动/高亮天然保持）。
+  // 原始毫秒值在渲染时存于 data-t0/t1，置信度存于 data-p
   const msToggle = card.querySelector('.ms-toggle');
   if (msToggle) {
     msToggle.addEventListener('change', () => {
       const on = msToggle.querySelector('input[type="checkbox"]').checked;
       msToggle.classList.toggle('on', on);
-      const list = card.querySelector('.seg-list');
-      const scrollTop = list ? list.scrollTop : 0;
-      const wasPlaying = !audio.paused;
-      const resumeAt = audio.currentTime;
-      const entry = jobEls.get(j.id);
-      if (entry) {
-        const holder = document.createElement('div');
-        holder.innerHTML = jobCard(j, on);
-        const fresh = holder.firstElementChild;
-        entry.el.replaceWith(fresh);
-        entry.el = fresh;
-        wirePlayer(fresh, j);
-        const freshList = fresh.querySelector('.seg-list');
-        if (freshList) freshList.scrollTop = scrollTop;
-        // 恢复播放进度（暂停态也要：进度条/时间文本/高亮随重建归零，需一并还原）
-        const freshAudio = fresh.querySelector('.job-audio');
-        if (freshAudio) {
-          freshAudio.addEventListener('loadedmetadata', () => {
-            freshAudio.currentTime = resumeAt;
-            // 暂停时 timeupdate 不触发，手动还原进度条/时间/高亮
-            const seek = fresh.querySelector('.player-seek');
-            if (seek) {
-              seek.value = Math.round(resumeAt * 1000);
-              seek.style.background = `linear-gradient(to right, var(--green) ${seek.max ? (resumeAt * 1000 / +seek.max) * 100 : 0}%, #e5e7eb ${seek.max ? (resumeAt * 1000 / +seek.max) * 100 : 0}%)`;
-            }
-            const timeEl = fresh.querySelector('.player-time');
-            if (timeEl) timeEl.textContent = `${fmtClock(resumeAt * 1000)} / ${fmtClock(freshAudio.duration * 1000)}`;
-            // 暂停时 timeupdate 不触发：按分段起点重算高亮条
-            const segEls = [...fresh.querySelectorAll('.seg')];
-            const starts = [...fresh.querySelectorAll('.seg-play')].map((b) => +b.dataset.t0);
-            if (starts.length) {
-              let idx = starts.findIndex((t0) => resumeAt * 1000 < t0);
-              if (idx === -1) idx = starts.length - 1;
-              else if (idx > 0) idx -= 1;
-              segEls.forEach((el, i) => el.classList.toggle('active', i === idx));
-            }
-            if (wasPlaying) freshAudio.play().catch(() => {});
-          }, { once: true });
-          freshAudio.load();
-        }
-      }
+      card.querySelectorAll('.seg-time').forEach((el) => {
+        el.textContent = `${fmtClockMs(+el.dataset.t0, on)} → ${fmtClockMs(+el.dataset.t1, on)}`;
+      });
+      card.querySelectorAll('.tl-bar').forEach((el) => {
+        const conf = el.dataset.p != null ? `（置信度 ${(el.dataset.p * 100).toFixed(0)}%）` : '';
+        el.title = `${fmtClockMs(+el.dataset.t0, on)} – ${fmtClockMs(+el.dataset.t1, on)}${conf}`;
+      });
     });
   }
 }
@@ -560,7 +526,7 @@ function resultBlock(j, cardMs = false) {
   const segs = r.segments.length ? r.segments.map((s) => `
     <div class="seg">
       ${hasAudio && !noTs ? `<button class="seg-play" data-t0="${s.t0_ms}" title="从此处播放">▶</button>` : ''}
-      ${noTs ? '' : `<span class="seg-time">${fmtClockMs(s.t0_ms, cardMs)} → ${fmtClockMs(s.t1_ms, cardMs)}</span>`}
+      ${noTs ? '' : `<span class="seg-time" data-t0="${s.t0_ms}" data-t1="${s.t1_ms}">${fmtClockMs(s.t0_ms, cardMs)} → ${fmtClockMs(s.t1_ms, cardMs)}</span>`}
       ${withDiarize ? `<span class="seg-speaker" style="--sp:${speakerColor(spMap.get(s.speaker_id) ?? 1)}">${esc(speakerName(spMap, s.speaker_id))}</span>` : ''}
       <span class="seg-text">${esc(s.text)}</span>
     </div>`).join('')
@@ -609,6 +575,7 @@ function timeline(r, spMap, ms = false) {
       <div class="tl-label">${esc(speakerName(spMap, sid))}</div>
       <div class="tl-track">${list.map((s) =>
         `<div class="tl-bar" style="left:${(s.t0_ms / dur * 100).toFixed(2)}%;width:${Math.max((s.t1_ms - s.t0_ms) / dur * 100, 0.3).toFixed(2)}%;background:${speakerColor(num)}"
+              data-t0="${s.t0_ms}" data-t1="${s.t1_ms}"${s.p != null ? ` data-p="${s.p}"` : ''}
               title="${fmtClockMs(s.t0_ms, ms)} – ${fmtClockMs(s.t1_ms, ms)}${s.p != null ? `（置信度 ${(s.p * 100).toFixed(0)}%）` : ''}"></div>`).join('')}</div>
     </div>`;
   }).join('');
