@@ -56,8 +56,8 @@ function fmtClock(ms) {
 }
 
 // 毫秒级版本：分段时间轴与悬浮提示用；播放器读数仍用秒级（timeupdate 粒度粗，毫秒只会闪跳）
-function fmtClockMs(ms) {
-  return `${fmtClock(ms)}.${String(Math.floor(ms % 1000)).padStart(3, '0')}`;
+function fmtClockMs(ms, showMs = true) {
+  return showMs ? `${fmtClock(ms)}.${String(Math.floor(ms % 1000)).padStart(3, '0')}` : fmtClock(ms);
 }
 
 function fmtSec(sec) {
@@ -417,6 +417,41 @@ function wirePlayer(card, j) {
     paintBar(0);
     segEls.forEach((el) => el.classList.remove('active'));
   });
+
+  // 毫秒开关：切换精度后整体重建卡片（时间列/悬浮提示都要换格式），
+  // 保持分段列表滚动位置与播放进度（音频元素随重建被替换）
+  const msBtn = card.querySelector('.ms-toggle');
+  if (msBtn) {
+    msBtn.addEventListener('click', () => {
+      msBtn.dataset.ms = msBtn.dataset.ms === '1' ? '0' : '1';
+      msBtn.classList.toggle('on', msBtn.dataset.ms === '1');
+      const list = card.querySelector('.seg-list');
+      const scrollTop = list ? list.scrollTop : 0;
+      const wasPlaying = !audio.paused;
+      const resumeAt = audio.currentTime;
+      const entry = jobEls.get(j.id);
+      if (entry) {
+        const holder = document.createElement('div');
+        holder.innerHTML = jobCard(j, msBtn.dataset.ms === '1');
+        const fresh = holder.firstElementChild;
+        entry.el.replaceWith(fresh);
+        entry.el = fresh;
+        wirePlayer(fresh, j);
+        const freshList = fresh.querySelector('.seg-list');
+        if (freshList) freshList.scrollTop = scrollTop;
+        if (wasPlaying) {
+          const freshAudio = fresh.querySelector('.job-audio');
+          if (freshAudio) {
+            freshAudio.addEventListener('loadedmetadata', () => {
+              freshAudio.currentTime = resumeAt;
+              freshAudio.play().catch(() => {});
+            }, { once: true });
+            freshAudio.load();
+          }
+        }
+      }
+    });
+  }
 }
 
 function renderJobs() {
@@ -427,8 +462,10 @@ function renderJobs() {
     const sig = jobSig(j);
     let entry = jobEls.get(j.id);
     if (!entry || entry.sig !== sig) {
+      // 毫秒开关是纯 UI 状态（不在 jobSig 里）：重建卡片时从旧 DOM 继承
+      const prevMs = entry ? entry.el.querySelector('.ms-toggle')?.dataset.ms === '1' : false;
       const holder = document.createElement('div');
-      holder.innerHTML = jobCard(j);
+      holder.innerHTML = jobCard(j, prevMs);
       const card = holder.firstElementChild;
       if (entry) entry.el.replaceWith(card);
       else wrap.appendChild(card);
@@ -457,7 +494,7 @@ function renderJobs() {
   }
 }
 
-function jobCard(j) {
+function jobCard(j, msPrecision = false) {
   const active = ['queued', 'converting', 'running'].includes(j.status);
   const label = STATUS_LABEL[j.status] || j.status;
   const badgeText = j.status === 'queued' && j.queue_position > 1
@@ -484,11 +521,11 @@ function jobCard(j) {
     </div>
     <div class="job-meta">${meta.map((m) => `<span class="dot">${typeof m === 'string' ? esc(m) : m.html}</span>`).join('')}</div>
     ${j.error ? `<div class="error-box">${esc(j.error)}</div>` : ''}
-    ${j.result ? resultBlock(j) : ''}
+    ${j.result ? resultBlock(j, msPrecision) : ''}
   </div>`;
 }
 
-function resultBlock(j) {
+function resultBlock(j, cardMs = false) {
   const r = j.result;
   const withDiarize = j.params.diarize === 'on';
   // timestamps='none' 时后端返回全零时间戳：隐藏时间列/时间轴/SRT，导出去掉时间前缀
@@ -507,7 +544,7 @@ function resultBlock(j) {
   const segs = r.segments.length ? r.segments.map((s) => `
     <div class="seg">
       ${hasAudio && !noTs ? `<button class="seg-play" data-t0="${s.t0_ms}" title="从此处播放">▶</button>` : ''}
-      ${noTs ? '' : `<span class="seg-time">${fmtClockMs(s.t0_ms)} → ${fmtClockMs(s.t1_ms)}</span>`}
+      ${noTs ? '' : `<span class="seg-time">${fmtClockMs(s.t0_ms, cardMs)} → ${fmtClockMs(s.t1_ms, cardMs)}</span>`}
       ${withDiarize ? `<span class="seg-speaker" style="--sp:${speakerColor(spMap.get(s.speaker_id) ?? 1)}">${esc(speakerName(spMap, s.speaker_id))}</span>` : ''}
       <span class="seg-text">${esc(s.text)}</span>
     </div>`).join('')
@@ -523,18 +560,19 @@ function resultBlock(j) {
       <span class="player-time">0:00 / ${fmtClock(j.audio_ms || 0)}</span>
       <audio class="job-audio" src="/api/jobs/${esc(j.id)}/audio" preload="none"></audio>
     </div>` : ''}
-    ${withDiarize && !noTs ? timeline(r, spMap) : ''}
+    ${withDiarize && !noTs ? timeline(r, spMap, cardMs) : ''}
     <div class="result-actions">
       <button class="btn mini" data-action="copy">复制全文</button>
       <button class="btn mini" data-action="txt">下载 TXT</button>
       ${noTs ? '' : '<button class="btn mini" data-action="srt">下载 SRT</button>'}
       <button class="btn mini" data-action="json">下载 JSON</button>
+      ${noTs ? '' : `<button class="btn mini ms-toggle${cardMs ? ' on' : ''}" data-ms="${cardMs ? 1 : 0}" title="切换时间戳精度">毫秒</button>`}
     </div>
     <div class="seg-list">${segs}</div>
   </div>`;
 }
 
-function timeline(r, spMap) {
+function timeline(r, spMap, ms = false) {
   const segs = r.speaker_segments || [];
   if (!segs.length) return '';
   const dur = Math.max(...segs.map((s) => s.t1_ms), 1);
@@ -550,7 +588,7 @@ function timeline(r, spMap) {
       <div class="tl-label">${esc(speakerName(spMap, sid))}</div>
       <div class="tl-track">${list.map((s) =>
         `<div class="tl-bar" style="left:${(s.t0_ms / dur * 100).toFixed(2)}%;width:${Math.max((s.t1_ms - s.t0_ms) / dur * 100, 0.3).toFixed(2)}%;background:${speakerColor(num)}"
-              title="${fmtClockMs(s.t0_ms)} – ${fmtClockMs(s.t1_ms)}${s.p != null ? `（置信度 ${(s.p * 100).toFixed(0)}%）` : ''}"></div>`).join('')}</div>
+              title="${fmtClockMs(s.t0_ms, ms)} – ${fmtClockMs(s.t1_ms, ms)}${s.p != null ? `（置信度 ${(s.p * 100).toFixed(0)}%）` : ''}"></div>`).join('')}</div>
     </div>`;
   }).join('');
   return `<div class="timeline">${bars}</div>`;

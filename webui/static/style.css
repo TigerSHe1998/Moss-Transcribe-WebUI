@@ -274,6 +274,10 @@ details[open] summary { margin-bottom: 10px; }
 
 .result-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 
+/* 毫秒精度开关：操作行最右侧，激活时绿色描边 */
+.ms-toggle { margin-left: auto; color: var(--muted); }
+.ms-toggle.on { color: var(--green); border-color: #a7f3d0; background: #ecfdf5; }
+
 /* 回听播放器（方形进度条） */
 .player { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .player-seek {
