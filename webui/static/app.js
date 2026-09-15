@@ -180,6 +180,9 @@ function renderStatus() {
   const limits = status.limits;
   const info = [];
   info.push(`模型: ${esc(m.variant || '-')}（${esc(m.arch || '-')}）`);
+  if (m.path) {
+    info.push(`模型文件: ${m.path}（${m.size_bytes ? fmtBytes(m.size_bytes) : '大小未知'}）`);
+  }
   info.push(`版本: transcribe_cpp ${esc(status.version)} / native ${esc(status.native_version)}`);
   if (limits) info.push(`单次音频上限: 约 ${fmtMsZh(limits.effective_max_audio_ms)}`);
   info.push(`ffmpeg: ${status.ffmpeg ? '已安装（自动转码 16kHz 单声道）' : '未安装（仅支持 16kHz 单声道 WAV）'}`);
@@ -242,6 +245,17 @@ async function startTranscribe() {
 }
 
 async function switchDevice() {
+  // 有任务进行时不切换后端，仅提示；点击时取最新状态，避免轮询间隙的竞态
+  let active = jobs.some((j) => ['queued', 'converting', 'running'].includes(j.status));
+  if (!active) {
+    try {
+      active = (await api('/api/status')).active_jobs > 0;
+    } catch { /* 状态查询失败时按本地任务列表判断 */ }
+  }
+  if (active) {
+    toast('请等待任务结束再切换设备', true);
+    return;
+  }
   const v = $('device-select').value;
   let body = { backend: 'auto', device_index: null };
   if (v !== 'auto') {
@@ -254,7 +268,7 @@ async function switchDevice() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    toast('开始重载模型（等待当前任务结束）…');
+    toast('开始重载模型…');
   } catch (e) {
     toast(`切换失败: ${e.message}`, true);
   }

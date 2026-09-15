@@ -249,6 +249,8 @@ class Engine:
                     }
                 self._model_info = {
                     "arch": model.arch, "variant": model.variant, "backend": model.backend,
+                    "path": str(self.model_path),
+                    "size_bytes": self.model_path.stat().st_size,
                 }
                 self._state = "ready"
                 if old is not None:
