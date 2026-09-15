@@ -10,7 +10,13 @@ const STATUS_LABEL = {
 };
 const SPEAKER_COLORS = ['#6366f1', '#059669', '#d97706', '#dc2626',
   '#7c3aed', '#0891b2', '#db2777', '#65a30d'];
-const LANG_LABEL = { zh: '中文', en: 'English' };
+
+// Moss 自行判定语言且不回传 Result.language，按文本粗略推断显示标签
+function guessLangLabel(text) {
+  if (!text) return '';
+  const cjk = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length;
+  return cjk >= text.replace(/\s/g, '').length * 0.2 ? '中文' : 'English';
+}
 
 let status = null;
 let jobs = [];
@@ -169,14 +175,9 @@ function renderStatus() {
   $('device-note').textContent = m.loading ? '模型加载中，加载完成后新任务自动继续…'
     : (m.error ? `提示: ${m.error}` : '');
 
-  // 语言选项跟随模型能力
+  // 说话人分离选项跟随模型能力
   const caps = status.capabilities;
   if (caps) {
-    const langSel = $('opt-language');
-    const cur = langSel.value;
-    langSel.innerHTML = caps.languages.map((l) =>
-      `<option value="${esc(l)}">${esc(LANG_LABEL[l] || l)} (${esc(l)})</option>`).join('');
-    if (caps.languages.includes(cur)) langSel.value = cur;
     const diaSel = $('opt-diarize');
     diaSel.disabled = !caps.supports_diarization;
     diaSel.title = caps.supports_diarization ? '' : '当前模型不支持说话人分离';
@@ -223,7 +224,6 @@ async function startTranscribe() {
   }
   const fd = new FormData();
   fd.append('file', selectedFile);
-  fd.append('language', $('opt-language').value);
   fd.append('timestamps', $('opt-timestamps').value);
   fd.append('diarize', $('opt-diarize').value);
   fd.append('kv_type', $('opt-kv').value);
@@ -326,7 +326,7 @@ function jobCard(j) {
     meta.push({ html: `已用时 <span data-elapsed>${fmtSec((Date.now() / 1000) - j.started)}</span>` });
   }
   if (j.status === 'done' && j.started && j.finished) meta.push(`耗时 ${fmtSec(j.finished - j.started)}`);
-  meta.push(`${LANG_LABEL[j.params.language] || j.params.language} · ${j.params.diarize === 'on' ? '说话人分离' : '无分离'}`);
+  meta.push(j.params.diarize === 'on' ? '说话人分离' : '无分离');
 
   let actions = '';
   if (active) actions = `<button class="btn mini danger" data-action="cancel">取消</button>`;
@@ -367,7 +367,7 @@ function resultBlock(j) {
 
   return `
   <div class="result">
-    <div class="result-meta">${esc(LANG_LABEL[j.params.language] || j.params.language)} · ${esc(meta)}${j.detail ? ` · ${esc(j.detail)}` : ''}</div>
+    <div class="result-meta">${esc(guessLangLabel(r.text))} · ${esc(meta)}${j.detail ? ` · ${esc(j.detail)}` : ''}</div>
     ${withDiarize ? timeline(r, spMap) : ''}
     <div class="result-actions">
       <button class="btn mini" data-action="copy">复制全文</button>

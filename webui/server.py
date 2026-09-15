@@ -76,7 +76,6 @@ def create_app(model_path: str, backend: str = "auto",
     @app.post("/api/jobs")
     async def create_job(
         file: UploadFile = File(...),
-        language: str = Form("zh"),
         timestamps: str = Form("segment"),
         diarize: str = Form("on"),
         kv_type: str = Form("auto"),
@@ -93,16 +92,6 @@ def create_app(model_path: str, backend: str = "auto",
         if n_threads < 0 or n_ctx < 0:
             raise HTTPException(400, "n_threads / n_ctx 不能为负数")
 
-        caps = engine.capabilities
-        if caps is not None:
-            if language not in caps.languages:
-                raise HTTPException(400, f"模型不支持语言 {language!r}，可选: {', '.join(caps.languages)}")
-            granularity = ("none", "segment", "word", "token")
-            if granularity.index(timestamps if timestamps != "auto" else "segment") \
-                    > granularity.index(caps.max_timestamp_kind):
-                raise HTTPException(400, f"模型最高支持 {caps.max_timestamp_kind} 级时间戳")
-            if diarize == "on" and not engine.supports_diarization:
-                raise HTTPException(400, "当前模型不支持说话人分离")
         if engine.state == "error":
             raise HTTPException(409, f"模型当前不可用: {engine.error}，请先切换设备重新加载")
 
@@ -130,7 +119,6 @@ def create_app(model_path: str, backend: str = "auto",
                 )
 
             params = {
-                "language": language,
                 "timestamps": timestamps,
                 "diarize": diarize,
                 "kv_type": kv_type,

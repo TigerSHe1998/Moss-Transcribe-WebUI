@@ -462,10 +462,12 @@ class Engine:
                 if job.cancel_requested:
                     # 关闭竞态窗口：置 running 与赋值 _active_session 之间收到的取消
                     session.cancel()
+                # Moss 的 language 参数实测无效果（模型内部自行判定语言），
+                # 传固定值仅为满足绑定接口
                 result = session.run(
                     pcm,
                     task="transcribe",
-                    language=job.params.get("language"),
+                    language="zh",
                     timestamps=job.params.get("timestamps", "segment"),
                     diarize=job.params.get("diarize", "on"),
                     keep_special_tags=bool(job.params.get("keep_special_tags")),
