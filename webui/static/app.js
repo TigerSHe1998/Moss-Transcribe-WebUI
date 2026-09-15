@@ -564,9 +564,9 @@ function resultBlock(j, cardMs = false) {
     <div class="result-actions">
       <button class="btn mini" data-action="copy">复制全文</button>
       <button class="btn mini" data-action="txt">下载 TXT</button>
-      ${noTs ? '' : '<button class="btn mini" data-action="srt">下载 SRT</button>'}
+      ${noTs || !r.segments.length ? '' : '<button class="btn mini" data-action="srt">下载 SRT</button>'}
       <button class="btn mini" data-action="json">下载 JSON</button>
-      ${noTs ? '' : `
+      ${noTs || !r.segments.length ? '' : `
       <label class="ms-toggle${cardMs ? ' on' : ''}" title="切换时间戳精度">
         <span class="ms-toggle-track"><span class="ms-toggle-knob"></span></span>
         <span class="ms-toggle-text">显示毫秒级时间戳</span>
