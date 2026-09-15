@@ -11,13 +11,6 @@ const STATUS_LABEL = {
 const SPEAKER_COLORS = ['#6366f1', '#059669', '#d97706', '#dc2626',
   '#7c3aed', '#0891b2', '#db2777', '#65a30d'];
 
-// Moss 自行判定语言且不回传 Result.language，按文本粗略推断显示标签
-function guessLangLabel(text) {
-  if (!text) return '';
-  const cjk = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length;
-  return cjk >= text.replace(/\s/g, '').length * 0.2 ? '中文' : 'English';
-}
-
 let status = null;
 let jobs = [];
 let selectedFile = null;
@@ -372,7 +365,7 @@ function resultBlock(j) {
 
   return `
   <div class="result">
-    <div class="result-meta">${esc(guessLangLabel(r.text))} · ${esc(meta)}${j.detail ? ` · ${esc(j.detail)}` : ''}</div>
+    <div class="result-meta">${esc(meta)}${j.detail ? ` · ${esc(j.detail)}` : ''}</div>
     ${withDiarize && !noTs ? timeline(r, spMap) : ''}
     <div class="result-actions">
       <button class="btn mini" data-action="copy">复制全文</button>
