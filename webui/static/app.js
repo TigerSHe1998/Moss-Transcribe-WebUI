@@ -439,15 +439,31 @@ function wirePlayer(card, j) {
         wirePlayer(fresh, j);
         const freshList = fresh.querySelector('.seg-list');
         if (freshList) freshList.scrollTop = scrollTop;
-        if (wasPlaying) {
-          const freshAudio = fresh.querySelector('.job-audio');
-          if (freshAudio) {
-            freshAudio.addEventListener('loadedmetadata', () => {
-              freshAudio.currentTime = resumeAt;
-              freshAudio.play().catch(() => {});
-            }, { once: true });
-            freshAudio.load();
-          }
+        // 恢复播放进度（暂停态也要：进度条/时间文本/高亮随重建归零，需一并还原）
+        const freshAudio = fresh.querySelector('.job-audio');
+        if (freshAudio) {
+          freshAudio.addEventListener('loadedmetadata', () => {
+            freshAudio.currentTime = resumeAt;
+            // 暂停时 timeupdate 不触发，手动还原进度条/时间/高亮
+            const seek = fresh.querySelector('.player-seek');
+            if (seek) {
+              seek.value = Math.round(resumeAt * 1000);
+              seek.style.background = `linear-gradient(to right, var(--green) ${seek.max ? (resumeAt * 1000 / +seek.max) * 100 : 0}%, #e5e7eb ${seek.max ? (resumeAt * 1000 / +seek.max) * 100 : 0}%)`;
+            }
+            const timeEl = fresh.querySelector('.player-time');
+            if (timeEl) timeEl.textContent = `${fmtClock(resumeAt * 1000)} / ${fmtClock(freshAudio.duration * 1000)}`;
+            // 暂停时 timeupdate 不触发：按分段起点重算高亮条
+            const segEls = [...fresh.querySelectorAll('.seg')];
+            const starts = [...fresh.querySelectorAll('.seg-play')].map((b) => +b.dataset.t0);
+            if (starts.length) {
+              let idx = starts.findIndex((t0) => resumeAt * 1000 < t0);
+              if (idx === -1) idx = starts.length - 1;
+              else if (idx > 0) idx -= 1;
+              segEls.forEach((el, i) => el.classList.toggle('active', i === idx));
+            }
+            if (wasPlaying) freshAudio.play().catch(() => {});
+          }, { once: true });
+          freshAudio.load();
         }
       }
     });
