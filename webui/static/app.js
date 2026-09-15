@@ -88,8 +88,25 @@ function speakerColor(num) {
   return SPEAKER_COLORS[(num - 1) % SPEAKER_COLORS.length];
 }
 
-function speakerName(map, id) {
-  return `说话人 ${map.get(id) ?? id}`;
+function speakerName(map, id, aliases) {
+  const alias = aliases?.get(id);
+  return alias || `说话人 ${map.get(id) ?? id}`;
+}
+
+// 说话人别名：按任务 id 存 localStorage（按原始 speaker_id）；
+// 页面刷新不丢；任务删除时清键；服务重启后任务为内存态，键自然作废
+function loadAliases(jobId) {
+  try {
+    return new Map(JSON.parse(localStorage.getItem(`spk-${jobId}`) || '[]'));
+  } catch {
+    return new Map();
+  }
+}
+
+function saveAliases(jobId, map) {
+  try {
+    localStorage.setItem(`spk-${jobId}`, JSON.stringify([...map]));
+  } catch { /* 隐私模式等存储被禁时静默降级为会话内 */ }
 }
 
 // ---- 轮询 ----
@@ -457,6 +474,41 @@ function wirePlayer(card, j) {
       });
     });
   }
+
+  // 说话人别名：点时间轴名字就地改名；提交后就地改写该说话人的所有
+  // 徽章（不重建卡片），别名存 localStorage 供导出与刷新后渲染使用
+  card.querySelectorAll('.tl-label').forEach((label) => {
+    label.addEventListener('click', () => {
+      if (label.querySelector('input')) return; // 已在编辑中
+      const sid = +label.dataset.sid;
+      const input = document.createElement('input');
+      input.className = 'tl-name-input';
+      input.value = label.textContent;
+      label.textContent = '';
+      label.appendChild(input);
+      input.focus();
+      input.select();
+      let cancelled = false;
+      const commit = (save) => {
+        if (save) {
+          const val = input.value.trim();
+          const aliases = loadAliases(j.id);
+          if (val) aliases.set(sid, val);
+          else aliases.delete(sid);
+          saveAliases(j.id, aliases);
+        }
+        const name = speakerName(buildSpeakerMap(j.result), sid, loadAliases(j.id));
+        label.textContent = name;
+        card.querySelectorAll(`.seg-speaker[data-sid="${sid}"]`)
+          .forEach((el) => { el.textContent = name; });
+      };
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') input.blur();
+        else if (e.key === 'Escape') { cancelled = true; input.blur(); }
+      });
+      input.addEventListener('blur', () => commit(!cancelled), { once: true });
+    });
+  });
 }
 
 function renderJobs() {
@@ -537,6 +589,7 @@ function resultBlock(j, cardMs = false) {
   const noTs = j.params.timestamps === 'none';
   const hasAudio = !!j.has_audio;
   const spMap = buildSpeakerMap(r);
+  const aliases = loadAliases(j.id);
 
   const meta = [
     `${r.segments.length} 段`,
@@ -550,7 +603,7 @@ function resultBlock(j, cardMs = false) {
     <div class="seg">
       ${hasAudio && !noTs ? `<button class="seg-play" data-t0="${s.t0_ms}" title="从此处播放">▶</button>` : ''}
       ${noTs ? '' : `<span class="seg-time" data-t0="${s.t0_ms}" data-t1="${s.t1_ms}">${fmtClockMs(s.t0_ms, cardMs)} → ${fmtClockMs(s.t1_ms, cardMs)}</span>`}
-      ${withDiarize ? `<span class="seg-speaker" style="--sp:${speakerColor(spMap.get(s.speaker_id) ?? 1)}">${esc(speakerName(spMap, s.speaker_id))}</span>` : ''}
+      ${withDiarize ? `<span class="seg-speaker" data-sid="${s.speaker_id}" style="--sp:${speakerColor(spMap.get(s.speaker_id) ?? 1)}">${esc(speakerName(spMap, s.speaker_id, aliases))}</span>` : ''}
       <span class="seg-text">${esc(s.text)}</span>
     </div>`).join('')
     : `<div class="seg"><span class="seg-text">${esc(r.text)}</span></div>`;
@@ -565,7 +618,7 @@ function resultBlock(j, cardMs = false) {
       <span class="player-time">0:00 / ${fmtClock(j.audio_ms || 0)}</span>
       <audio class="job-audio" src="/api/jobs/${esc(j.id)}/audio" preload="none"></audio>
     </div>` : ''}
-    ${withDiarize && !noTs ? timeline(r, spMap, cardMs) : ''}
+    ${withDiarize && !noTs ? timeline(r, spMap, cardMs, aliases) : ''}
     <div class="result-actions">
       <button class="btn mini" data-action="copy">复制全文</button>
       <button class="btn mini" data-action="txt">下载 TXT</button>
@@ -582,7 +635,7 @@ function resultBlock(j, cardMs = false) {
   </div>`;
 }
 
-function timeline(r, spMap, ms = false) {
+function timeline(r, spMap, ms = false, aliases = null) {
   const segs = r.speaker_segments || [];
   if (!segs.length) return '';
   const dur = Math.max(...segs.map((s) => s.t1_ms), 1);
@@ -595,7 +648,7 @@ function timeline(r, spMap, ms = false) {
     const num = spMap.get(sid) ?? 1;
     return `
     <div class="tl-row">
-      <div class="tl-label">${esc(speakerName(spMap, sid))}</div>
+      <div class="tl-label" data-sid="${sid}" title="点击修改说话人名称">${esc(speakerName(spMap, sid, aliases))}</div>
       <div class="tl-track">${list.map((s) =>
         `<div class="tl-bar" style="left:${(s.t0_ms / dur * 100).toFixed(2)}%;width:${Math.max((s.t1_ms - s.t0_ms) / dur * 100, 0.3).toFixed(2)}%;background:${speakerColor(num)}"
               data-t0="${s.t0_ms}" data-t1="${s.t1_ms}"${s.p != null ? ` data-p="${s.p}"` : ''}
@@ -608,9 +661,9 @@ function timeline(r, spMap, ms = false) {
 // ---- 导出 ----
 // ms：跟随结果卡片的毫秒开关（按钮所在卡片的 data-ms）
 
-function segLine(s, withDiarize, spMap, noTs, ms = false) {
+function segLine(s, withDiarize, spMap, noTs, ms = false, aliases = null) {
   const time = noTs ? '' : `[${fmtClockMs(s.t0_ms, ms)} → ${fmtClockMs(s.t1_ms, ms)}] `;
-  const sp = withDiarize ? `${speakerName(spMap, s.speaker_id)}: ` : '';
+  const sp = withDiarize ? `${speakerName(spMap, s.speaker_id, aliases)}: ` : '';
   return `${time}${sp}${s.text}`;
 }
 
@@ -619,7 +672,8 @@ function fullText(j, ms = false) {
   const withDiarize = j.params.diarize === 'on';
   const noTs = j.params.timestamps === 'none';
   const spMap = buildSpeakerMap(j.result);
-  return j.result.segments.map((s) => segLine(s, withDiarize, spMap, noTs, ms)).join('\n');
+  const aliases = loadAliases(j.id);
+  return j.result.segments.map((s) => segLine(s, withDiarize, spMap, noTs, ms, aliases)).join('\n');
 }
 
 function srtTime(ms) {
@@ -631,8 +685,9 @@ function srtTime(ms) {
 function toSRT(j) {
   const withDiarize = j.params.diarize === 'on';
   const spMap = buildSpeakerMap(j.result);
+  const aliases = loadAliases(j.id);
   return j.result.segments.map((s, i) => {
-    const sp = withDiarize ? `${speakerName(spMap, s.speaker_id)}: ` : '';
+    const sp = withDiarize ? `${speakerName(spMap, s.speaker_id, aliases)}: ` : '';
     return `${i + 1}\n${srtTime(s.t0_ms)} --> ${srtTime(s.t1_ms)}\n${sp}${s.text}\n`;
   }).join('\n');
 }
@@ -680,6 +735,7 @@ $('jobs').addEventListener('click', async (e) => {
         break;
       case 'delete':
         await api(`/api/jobs/${id}/delete`, { method: 'POST' });
+        try { localStorage.removeItem(`spk-${id}`); } catch { /* 存储被禁 */ }
         break;
       case 'copy':
         await navigator.clipboard.writeText(fullText(job, btn.closest('.result')?.querySelector('.ms-toggle input')?.checked));

@@ -344,7 +344,30 @@ details[open] summary { margin-bottom: 10px; }
   border-radius: 7px;
 }
 .tl-row { display: grid; grid-template-columns: 64px 1fr; gap: 8px; align-items: center; }
-.tl-label { font-size: 11.5px; color: var(--muted); text-align: right; }
+.tl-label {
+  font-size: 11.5px;
+  color: var(--muted);
+  text-align: right;
+  cursor: pointer;
+  position: relative;
+}
+.tl-label:hover { color: var(--accent); }
+.tl-name-input {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 104px;
+  padding: 2px 5px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 11.5px;
+  text-align: left;
+  background: #fff;
+  color: var(--text);
+  z-index: 5;
+}
 .tl-track { position: relative; height: 10px; background: #e5e7eb; overflow: hidden; }
 .tl-bar { position: absolute; top: 0; bottom: 0; min-width: 2px; opacity: .85; cursor: pointer; }
 .tl-bar:hover { opacity: 1; filter: brightness(1.15); }
