@@ -91,7 +91,6 @@ def create_app(model_path: str, backend: str = "auto",
         kv_type: str = Form("auto"),
         n_threads: int = Form(0),
         n_ctx: int = Form(0),
-        keep_special_tags: bool = Form(False),
     ):
         if timestamps not in ("none", "auto", "segment"):
             raise HTTPException(400, f"不支持的时间戳选项 {timestamps!r}，可选: none/auto/segment")
@@ -134,7 +133,6 @@ def create_app(model_path: str, backend: str = "auto",
                 "kv_type": kv_type,
                 "n_threads": n_threads,
                 "n_ctx": n_ctx,
-                "keep_special_tags": keep_special_tags,
             }
             job = engine.submit(dest, file.filename or dest.name, params)
             return {"job_id": job.id}

@@ -62,9 +62,6 @@
         <label class="field">上下文长度 n_ctx（0 = 默认）
           <input id="opt-ctx" type="number" min="0" step="256" value="0">
         </label>
-        <label class="field check">
-          <input id="opt-special" type="checkbox"> 保留特殊标记
-        </label>
         <p class="note">调小 n_ctx 会降低单次音频的时长上限；线程数仅在 CPU 后端生效。</p>
       </details>
     </div>
@@ -98,6 +95,6 @@
 </main>
 
 <div id="toast" hidden></div>
-<script src="/static/app.js?v=20260915c"></script>
+<script src="/static/app.js?v=20260915d"></script>
 </body>
 </html>

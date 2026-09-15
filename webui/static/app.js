@@ -224,7 +224,6 @@ async function startTranscribe() {
   fd.append('kv_type', $('opt-kv').value);
   fd.append('n_threads', $('opt-threads').value || '0');
   fd.append('n_ctx', $('opt-ctx').value || '0');
-  fd.append('keep_special_tags', $('opt-special').checked ? 'true' : 'false');
 
   const btn = $('start-btn');
   btn.disabled = true;
