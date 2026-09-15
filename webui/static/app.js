@@ -350,10 +350,13 @@ function jobCard(j) {
 function resultBlock(j) {
   const r = j.result;
   const withDiarize = j.params.diarize === 'on';
+  // timestamps='none' 时后端返回全零时间戳：隐藏时间列/时间轴/SRT，导出去掉时间前缀
+  const noTs = j.params.timestamps === 'none';
   const spMap = buildSpeakerMap(r);
 
   const meta = [
     `${r.segments.length} 段`,
+    noTs ? '无时间戳' : null,
     withDiarize && spMap.size ? `${spMap.size} 位说话人` : null,
     `解码 ${(r.timings.decode_ms / 1000).toFixed(1)}s`,
     `编码 ${(r.timings.encode_ms / 1000).toFixed(1)}s`,
@@ -361,7 +364,7 @@ function resultBlock(j) {
 
   const segs = r.segments.length ? r.segments.map((s) => `
     <div class="seg">
-      <span class="seg-time">${fmtClock(s.t0_ms)} → ${fmtClock(s.t1_ms)}</span>
+      ${noTs ? '' : `<span class="seg-time">${fmtClock(s.t0_ms)} → ${fmtClock(s.t1_ms)}</span>`}
       ${withDiarize ? `<span class="seg-speaker" style="--sp:${speakerColor(spMap.get(s.speaker_id) ?? 1)}">${esc(speakerName(spMap, s.speaker_id))}</span>` : ''}
       <span class="seg-text">${esc(s.text)}</span>
     </div>`).join('')
@@ -370,11 +373,11 @@ function resultBlock(j) {
   return `
   <div class="result">
     <div class="result-meta">${esc(guessLangLabel(r.text))} · ${esc(meta)}${j.detail ? ` · ${esc(j.detail)}` : ''}</div>
-    ${withDiarize ? timeline(r, spMap) : ''}
+    ${withDiarize && !noTs ? timeline(r, spMap) : ''}
     <div class="result-actions">
       <button class="btn mini" data-action="copy">复制全文</button>
       <button class="btn mini" data-action="txt">下载 TXT</button>
-      <button class="btn mini" data-action="srt">下载 SRT</button>
+      ${noTs ? '' : '<button class="btn mini" data-action="srt">下载 SRT</button>'}
       <button class="btn mini" data-action="json">下载 JSON</button>
     </div>
     <div class="seg-list">${segs}</div>
@@ -405,17 +408,18 @@ function timeline(r, spMap) {
 
 // ---- 导出 ----
 
-function segLine(s, withDiarize, spMap) {
-  const time = `[${fmtClock(s.t0_ms)} → ${fmtClock(s.t1_ms)}]`;
+function segLine(s, withDiarize, spMap, noTs) {
+  const time = noTs ? '' : `[${fmtClock(s.t0_ms)} → ${fmtClock(s.t1_ms)}] `;
   const sp = withDiarize ? `${speakerName(spMap, s.speaker_id)}: ` : '';
-  return `${time} ${sp}${s.text}`;
+  return `${time}${sp}${s.text}`;
 }
 
 function fullText(j) {
   if (!j.result.segments.length) return j.result.text;
   const withDiarize = j.params.diarize === 'on';
+  const noTs = j.params.timestamps === 'none';
   const spMap = buildSpeakerMap(j.result);
-  return j.result.segments.map((s) => segLine(s, withDiarize, spMap)).join('\n');
+  return j.result.segments.map((s) => segLine(s, withDiarize, spMap, noTs)).join('\n');
 }
 
 function srtTime(ms) {
