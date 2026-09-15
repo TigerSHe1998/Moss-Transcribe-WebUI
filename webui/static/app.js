@@ -55,6 +55,11 @@ function fmtClock(ms) {
   return h ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
 }
 
+// 毫秒级版本：分段时间轴与悬浮提示用；播放器读数仍用秒级（timeupdate 粒度粗，毫秒只会闪跳）
+function fmtClockMs(ms) {
+  return `${fmtClock(ms)}.${String(Math.floor(ms % 1000)).padStart(3, '0')}`;
+}
+
 function fmtSec(sec) {
   if (sec < 60) return `${sec.toFixed(0)} 秒`;
   const m = Math.floor(sec / 60), s = Math.round(sec % 60);
@@ -502,7 +507,7 @@ function resultBlock(j) {
   const segs = r.segments.length ? r.segments.map((s) => `
     <div class="seg">
       ${hasAudio && !noTs ? `<button class="seg-play" data-t0="${s.t0_ms}" title="从此处播放">▶</button>` : ''}
-      ${noTs ? '' : `<span class="seg-time">${fmtClock(s.t0_ms)} → ${fmtClock(s.t1_ms)}</span>`}
+      ${noTs ? '' : `<span class="seg-time">${fmtClockMs(s.t0_ms)} → ${fmtClockMs(s.t1_ms)}</span>`}
       ${withDiarize ? `<span class="seg-speaker" style="--sp:${speakerColor(spMap.get(s.speaker_id) ?? 1)}">${esc(speakerName(spMap, s.speaker_id))}</span>` : ''}
       <span class="seg-text">${esc(s.text)}</span>
     </div>`).join('')
@@ -545,7 +550,7 @@ function timeline(r, spMap) {
       <div class="tl-label">${esc(speakerName(spMap, sid))}</div>
       <div class="tl-track">${list.map((s) =>
         `<div class="tl-bar" style="left:${(s.t0_ms / dur * 100).toFixed(2)}%;width:${Math.max((s.t1_ms - s.t0_ms) / dur * 100, 0.3).toFixed(2)}%;background:${speakerColor(num)}"
-              title="${fmtClock(s.t0_ms)} – ${fmtClock(s.t1_ms)}${s.p != null ? `（置信度 ${(s.p * 100).toFixed(0)}%）` : ''}"></div>`).join('')}</div>
+              title="${fmtClockMs(s.t0_ms)} – ${fmtClockMs(s.t1_ms)}${s.p != null ? `（置信度 ${(s.p * 100).toFixed(0)}%）` : ''}"></div>`).join('')}</div>
     </div>`;
   }).join('');
   return `<div class="timeline">${bars}</div>`;
