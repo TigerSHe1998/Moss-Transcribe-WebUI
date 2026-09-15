@@ -1,14 +1,14 @@
 # 虚拟环境
 .venv/
 
-# 二进制安装包
+# 二进制安装包（whl/ 目录仅保留说明，二进制不入库）
 *.whl
 
-# 测试音频（大二进制文件，不入库）
-test/*.wav
+# 本地测试脚本与音频，不分发
+test/
 
-# 模型权重（GB 级大文件，不入库；放工程目录 model/ 下）
-model/
+# 模型权重（GB 级大文件，不入库；占位提示文件入库）
+model/*.gguf
 
 # 个人笔记，不入库
 transcribe_cpp_notes.txt
@@ -17,5 +17,5 @@ transcribe_cpp_notes.txt
 __pycache__/
 *.pyc
 
-# WebUI 运行时产生的上传文件
+# WebUI 运行时自动生成的上传/回听文件
 uploads/

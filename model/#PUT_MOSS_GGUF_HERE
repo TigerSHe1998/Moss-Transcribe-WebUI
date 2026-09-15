@@ -1,0 +1,2 @@
+把 MOSS-Transcribe-Diarize 的 GGUF 模型文件（如 MOSS-Transcribe-Diarize-Q8_0.gguf）放到本目录。
+服务器默认加载这里的模型；也可用 -m/--model 参数指定其他路径。
