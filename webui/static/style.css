@@ -346,7 +346,8 @@ details[open] summary { margin-bottom: 10px; }
 .tl-row { display: grid; grid-template-columns: 64px 1fr; gap: 8px; align-items: center; }
 .tl-label { font-size: 11.5px; color: var(--muted); text-align: right; }
 .tl-track { position: relative; height: 10px; background: #e5e7eb; overflow: hidden; }
-.tl-bar { position: absolute; top: 0; bottom: 0; min-width: 2px; opacity: .85; }
+.tl-bar { position: absolute; top: 0; bottom: 0; min-width: 2px; opacity: .85; cursor: pointer; }
+.tl-bar:hover { opacity: 1; filter: brightness(1.15); }
 
 /* 分段列表 */
 .seg-list {

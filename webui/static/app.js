@@ -351,7 +351,7 @@ function wirePlayer(card, j) {
     timeEl.textContent = `${fmtClock(ms)} / ${fmtClock(audio.duration * 1000 || j.audio_ms)}`;
   };
 
-  const setActive = (ms) => {
+  const setActive = (ms, forceScroll = false) => {
     if (!bounds.length) return;
     let idx = -1;
     for (let i = 0; i < bounds.length; i++) {
@@ -359,13 +359,28 @@ function wirePlayer(card, j) {
     }
     if (idx < 0 && ms >= bounds[bounds.length - 1][1]) idx = bounds.length - 1;
     segEls.forEach((el, i) => el.classList.toggle('active', i === idx));
-    // 仅在播放中滚动，让当前条保持可见；手动算 scrollTop 避免牵动整页
-    if (idx >= 0 && !audio.paused) {
+    // 播放中持续跟随；forceScroll 供点击跳转（暂停时也要滚到位）
+    if (idx >= 0 && (forceScroll || !audio.paused)) {
       const top = segEls[idx].offsetTop;
       if (top < segList.scrollTop + 8 || top > segList.scrollTop + segList.clientHeight - 36) {
         segList.scrollTop = top - segList.clientHeight / 2;
       }
     }
+  };
+
+  // 音频跳到 t0（ms），同步进度条/时间文本/高亮；不改变播放状态
+  const jumpTo = (ms) => {
+    if (audio.readyState >= 1) audio.currentTime = ms / 1000;
+    else {
+      // preload=none 且从未播放：主动加载 metadata，让 pendingSeek 尽快落地
+      // （否则要等用户点播放，届时才跳转会显得"从 0 开始又跳走"）
+      pendingSeek = ms / 1000;
+      audio.load();
+    }
+    seek.value = Math.round(ms);
+    setTimeText(ms);
+    paintBar(seek.max ? (ms / +seek.max) * 100 : 0);
+    setActive(ms, true);
   };
 
   toggle.addEventListener('click', () => {
@@ -375,21 +390,29 @@ function wirePlayer(card, j) {
 
   card.querySelectorAll('.seg-play').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const t0 = +btn.dataset.t0 / 1000;
-      if (audio.readyState >= 1) audio.currentTime = t0;
-      else pendingSeek = t0;
+      jumpTo(+btn.dataset.t0);
       audio.play().catch(() => {});
     });
   });
 
-  seek.addEventListener('input', () => {
-    const ms = +seek.value;
-    if (audio.readyState >= 1) audio.currentTime = ms / 1000;
-    else pendingSeek = ms / 1000;
-    setTimeText(ms);
-    paintBar(seek.max ? (ms / +seek.max) * 100 : 0);
-    setActive(ms);
+  // 说话人时间轴色块：跳到色块起始时间，转录条目按时间落点高亮；
+  // 播放状态保持原样（播放则继续播，暂停则保持暂停）
+  card.querySelectorAll('.tl-bar').forEach((bar) => {
+    bar.addEventListener('click', () => {
+      const t0 = +bar.dataset.t0;
+      // 说话人段与转录分段时间未必对齐：落在色块区间内、否则其后最近的一段
+      let idx = bounds.findIndex(([a, b]) => t0 >= a && t0 < b);
+      if (idx === -1) {
+        for (let i = 0; i < bounds.length; i++) {
+          if (bounds[i][0] >= t0) { idx = i; break; }
+        }
+      }
+      if (idx === -1) idx = bounds.length - 1;
+      jumpTo(bounds[idx][0]);
+    });
   });
+
+  seek.addEventListener('input', () => jumpTo(+seek.value));
 
   audio.addEventListener('loadedmetadata', () => {
     if (audio.duration && isFinite(audio.duration)) seek.max = Math.round(audio.duration * 1000);
