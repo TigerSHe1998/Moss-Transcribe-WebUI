@@ -1,14 +1,17 @@
 # 虚拟环境
 .venv/
 
-# 二进制安装包（whl/ 目录仅保留说明，二进制不入库）
+# 二进制安装包（resources/whl/ 目录仅保留说明，二进制不入库）
 *.whl
 
 # 本地测试脚本与音频，不分发
 test/
 
 # 模型权重（GB 级大文件，不入库；占位提示文件入库）
-model/*.gguf
+resources/model/*.gguf
+
+# ffmpeg 运行时二进制（用户自行放置；resources/ffmpeg/ 下的 exe 不入库）
+resources/ffmpeg/
 
 # 个人笔记，不入库
 transcribe_cpp_notes.txt

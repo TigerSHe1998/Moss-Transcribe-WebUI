@@ -26,8 +26,8 @@ from engine import Engine, fmt_ms, probe_duration_ms
 
 logger = logging.getLogger("webui")
 
-# 默认模型：工程目录 model/ 下（gitignore，不入库）；可用 --model 指定其他路径
-DEFAULT_MODEL = str(Path(__file__).resolve().parent.parent / "model" / "MOSS-Transcribe-Diarize-Q8_0.gguf")
+# 默认模型：resources/model/ 下（gitignore，不入库）；可用 --model 指定其他路径
+DEFAULT_MODEL = str(Path(__file__).resolve().parent.parent / "resources" / "model" / "MOSS-Transcribe-Diarize-Q8_0.gguf")
 MAX_UPLOAD_BYTES = 2 * 1024**3
 STATIC_DIR = Path(__file__).parent / "static"
 
