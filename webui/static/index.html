@@ -6,7 +6,7 @@
 <title>Moss 转录 WebUI</title>
 <link rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙️</text></svg>">
-<link rel="stylesheet" href="/static/style.css?v=20260915f">
+<link rel="stylesheet" href="/static/style.css?v=20260915h">
 </head>
 <body>
 <header>
@@ -87,6 +87,10 @@
         <span id="file-size" class="muted"></span>
         <button id="file-clear" class="btn tiny" title="移除">✕</button>
       </div>
+      <div id="upload-progress" class="upload-progress" hidden>
+        <div id="upload-fill" class="upload-fill"></div>
+        <span id="upload-label" class="upload-label">上传中 0%</span>
+      </div>
       <button id="start-btn" class="btn primary" disabled>开始转录</button>
     </div>
 
@@ -95,6 +99,6 @@
 </main>
 
 <div id="toast" hidden></div>
-<script src="/static/app.js?v=20260915f"></script>
+<script src="/static/app.js?v=20260915g"></script>
 </body>
 </html>

@@ -214,6 +214,29 @@ function setFile(file) {
   updateStartBtn();
 }
 
+// fetch 拿不到上传进度，提交大文件必须用 XHR 的 upload.onprogress
+function uploadWithProgress(fd, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/jobs');
+    xhr.responseType = 'json';
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(e.loaded / e.total);
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(xhr.response);
+      } else {
+        const d = xhr.response?.detail;
+        reject(new Error(typeof d === 'string' ? d : (d ? JSON.stringify(d) : `${xhr.status} ${xhr.statusText}`)));
+      }
+    };
+    xhr.onerror = () => reject(new Error('网络错误'));
+    xhr.onabort = () => reject(new Error('已取消'));
+    xhr.send(fd);
+  });
+}
+
 async function startTranscribe() {
   if (!selectedFile) return;
   if (status?.model?.state !== 'ready') {
@@ -229,15 +252,26 @@ async function startTranscribe() {
   fd.append('n_ctx', $('opt-ctx').value || '0');
 
   const btn = $('start-btn');
+  const bar = $('upload-progress');
+  const fill = $('upload-fill');
+  const label = $('upload-label');
   btn.disabled = true;
-  btn.textContent = '提交中…';
+  btn.textContent = '上传中…';
+  bar.hidden = false;
+  const paint = (pct) => {
+    fill.style.width = (pct * 100).toFixed(1) + '%';
+    label.textContent = `上传中 ${(pct * 100).toFixed(0)}%`;
+  };
+  paint(0);
   try {
-    await api('/api/jobs', { method: 'POST', body: fd });
+    await uploadWithProgress(fd, paint);
     setFile(null);
     toast('已加入任务队列');
   } catch (e) {
     toast(`提交失败: ${e.message}`, true);
   } finally {
+    bar.hidden = true;
+    fill.style.width = '0';
     btn.textContent = '开始转录';
     updateStartBtn();
     pollNow();
