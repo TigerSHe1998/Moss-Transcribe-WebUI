@@ -15,6 +15,10 @@
 
 * { box-sizing: border-box; }
 
+/* hidden 属性必须优先于任何 display 规则
+   （.file-chip 的 display:flex 曾把 hidden 顶掉，导致点 X 后文件条不消失） */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   background: var(--bg);
@@ -193,6 +197,7 @@ details[open] summary { margin-bottom: 10px; }
 #start-btn { margin-top: 12px; width: 100%; padding: 10px; font-size: 15px; }
 
 /* 任务卡片 */
+#content { display: flex; flex-direction: column; gap: 14px; }
 #jobs { display: flex; flex-direction: column; gap: 14px; }
 
 .job-head {
