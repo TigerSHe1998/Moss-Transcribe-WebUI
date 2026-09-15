@@ -367,7 +367,6 @@ class Engine:
                 return False
             if job.status == "queued":
                 job.status = "cancelled"
-                job.detail = "已取消"
                 job.finished = time.time()
                 return True
             if job.status in ("converting", "running"):
@@ -476,13 +475,12 @@ class Engine:
                 job.status = "done"
             except tc.Aborted as e:
                 job.status = "cancelled"
-                job.detail = "已取消"
                 partial = getattr(e, "partial_result", None)
                 # Moss 的分段在解码完成时才物化，中途取消的 partial 常为空；
                 # 仅在确有内容时展示
                 if partial is not None and (partial.text or partial.segments):
                     job.result = serialize_result(partial)
-                    job.detail = "已取消（含部分结果）"
+                    job.detail = "含部分结果"
             except tc.OutputTruncated as e:
                 partial = getattr(e, "partial_result", None)
                 if partial is None:
