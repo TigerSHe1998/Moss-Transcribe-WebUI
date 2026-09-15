@@ -10,8 +10,9 @@ test/
 # 模型权重（GB 级大文件，不入库；占位提示文件入库）
 resources/model/*.gguf
 
-# ffmpeg 运行时二进制（用户自行放置；resources/ffmpeg/ 下的 exe 不入库）
-resources/ffmpeg/
+# ffmpeg 运行时二进制（用户自行放置到 resources/ffmpeg/，不入库；占位提示文件入库）
+resources/ffmpeg/*.exe
+resources/ffmpeg/*.dll
 
 # 个人笔记，不入库
 transcribe_cpp_notes.txt

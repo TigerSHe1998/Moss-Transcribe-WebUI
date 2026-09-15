@@ -1,0 +1,3 @@
+把 ffmpeg.exe 和 ffprobe.exe 放到本目录（可从 ffmpeg.org 或 gyan.dev 的 essentials 构建中提取，两个文件各约 100MB）。
+服务器会优先使用本目录的二进制；目录为空时自动回落到系统 PATH 中的 ffmpeg。
+未提供任何 ffmpeg 时仅支持 16kHz 单声道 16-bit PCM WAV 输入。
