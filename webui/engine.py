@@ -348,7 +348,8 @@ class Engine:
     def _drop_locked(self, job_id: str) -> None:
         job = self._jobs.pop(job_id, None)
         if job is not None:
-            Path(job.stored_path).unlink(missing_ok=True)
+            if job.stored_path:
+                Path(job.stored_path).unlink(missing_ok=True)
             if job.audio_path:
                 Path(job.audio_path).unlink(missing_ok=True)
         if job_id in self._order:
@@ -438,14 +439,17 @@ class Engine:
 
     def _process(self, job: Job) -> None:
         with self._run_lock:
+            # 这两个终态不建会话（模型可能不可用）；原上传文件同样不再需要
             if job.cancel_requested or job.status == "cancelled":
                 job.status = "cancelled"
                 job.finished = time.time()
+                self._drop_stored(job)
                 return
             if self._state != "ready" or self._model is None:
                 job.status = "error"
                 job.error = f"模型不可用（{self._state}）: {self._error or '尚未加载完成'}"
                 job.finished = time.time()
+                self._drop_stored(job)
                 return
 
             # 先建会话（开销极小）：拿到本任务参数（n_ctx 等）下的真实时长上限
@@ -485,6 +489,10 @@ class Engine:
                 except OSError as e:
                     log.warning("写回听音频失败 %s: %s", wav_path, e)
 
+                # 原始上传文件已无用（大视频很占磁盘）：转码完成即删，
+                # 只保留回听 WAV；失败/取消路径由 _process 的 finally 兜底
+                self._drop_stored(job)
+
                 job.status = "running"
                 job.detail = ""
                 job.started = time.time()
@@ -523,6 +531,19 @@ class Engine:
                 self._active_session = None
                 session.close()
                 job.finished = time.time()
+                # 任何终态（成功/失败/取消/超限）都不再需要原始上传文件
+                self._drop_stored(job)
+
+    @staticmethod
+    def _drop_stored(job: Job) -> None:
+        """删除原始上传文件（转码后即无用）；删不掉（如被占用）留给任务删除兜底。"""
+        if not job.stored_path:
+            return
+        try:
+            Path(job.stored_path).unlink(missing_ok=True)
+            job.stored_path = ""
+        except OSError as e:
+            log.warning("删除原始上传文件失败 %s: %s", job.stored_path, e)
 
     def _over_limit(self, job: Job, audio_ms: int, limit: Optional[int]) -> bool:
         if limit and audio_ms > limit:
