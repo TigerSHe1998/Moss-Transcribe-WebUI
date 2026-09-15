@@ -418,13 +418,13 @@ function wirePlayer(card, j) {
     segEls.forEach((el) => el.classList.remove('active'));
   });
 
-  // 毫秒开关：切换精度后整体重建卡片（时间列/悬浮提示都要换格式），
-  // 保持分段列表滚动位置与播放进度（音频元素随重建被替换）
-  const msBtn = card.querySelector('.ms-toggle');
-  if (msBtn) {
-    msBtn.addEventListener('click', () => {
-      msBtn.dataset.ms = msBtn.dataset.ms === '1' ? '0' : '1';
-      msBtn.classList.toggle('on', msBtn.dataset.ms === '1');
+  // 毫秒开关（label+checkbox toggle）：切换精度后整体重建卡片（时间列/
+  // 悬浮提示/导出格式都要换），保持分段列表滚动位置与播放进度
+  const msToggle = card.querySelector('.ms-toggle');
+  if (msToggle) {
+    msToggle.addEventListener('change', () => {
+      const on = msToggle.querySelector('input[type="checkbox"]').checked;
+      msToggle.classList.toggle('on', on);
       const list = card.querySelector('.seg-list');
       const scrollTop = list ? list.scrollTop : 0;
       const wasPlaying = !audio.paused;
@@ -432,7 +432,7 @@ function wirePlayer(card, j) {
       const entry = jobEls.get(j.id);
       if (entry) {
         const holder = document.createElement('div');
-        holder.innerHTML = jobCard(j, msBtn.dataset.ms === '1');
+        holder.innerHTML = jobCard(j, on);
         const fresh = holder.firstElementChild;
         entry.el.replaceWith(fresh);
         entry.el = fresh;
@@ -463,7 +463,7 @@ function renderJobs() {
     let entry = jobEls.get(j.id);
     if (!entry || entry.sig !== sig) {
       // 毫秒开关是纯 UI 状态（不在 jobSig 里）：重建卡片时从旧 DOM 继承
-      const prevMs = entry ? entry.el.querySelector('.ms-toggle')?.dataset.ms === '1' : false;
+      const prevMs = entry ? entry.el.querySelector('.ms-toggle input')?.checked : false;
       const holder = document.createElement('div');
       holder.innerHTML = jobCard(j, prevMs);
       const card = holder.firstElementChild;
@@ -566,7 +566,12 @@ function resultBlock(j, cardMs = false) {
       <button class="btn mini" data-action="txt">下载 TXT</button>
       ${noTs ? '' : '<button class="btn mini" data-action="srt">下载 SRT</button>'}
       <button class="btn mini" data-action="json">下载 JSON</button>
-      ${noTs ? '' : `<button class="btn mini ms-toggle${cardMs ? ' on' : ''}" data-ms="${cardMs ? 1 : 0}" title="切换时间戳精度">毫秒</button>`}
+      ${noTs ? '' : `
+      <label class="ms-toggle${cardMs ? ' on' : ''}" title="切换时间戳精度">
+        <span class="ms-toggle-track"><span class="ms-toggle-knob"></span></span>
+        <span class="ms-toggle-text">显示毫秒级时间戳</span>
+        <input type="checkbox"${cardMs ? ' checked' : ''} hidden>
+      </label>`}
     </div>
     <div class="seg-list">${segs}</div>
   </div>`;
@@ -671,11 +676,11 @@ $('jobs').addEventListener('click', async (e) => {
         await api(`/api/jobs/${id}/delete`, { method: 'POST' });
         break;
       case 'copy':
-        await navigator.clipboard.writeText(fullText(job, btn.closest('.result')?.querySelector('.ms-toggle')?.dataset.ms === '1'));
+        await navigator.clipboard.writeText(fullText(job, btn.closest('.result')?.querySelector('.ms-toggle input')?.checked));
         toast('已复制到剪贴板');
         break;
       case 'txt':
-        download(`${baseName(job)}.txt`, fullText(job, btn.closest('.result')?.querySelector('.ms-toggle')?.dataset.ms === '1'));
+        download(`${baseName(job)}.txt`, fullText(job, btn.closest('.result')?.querySelector('.ms-toggle input')?.checked));
         break;
       case 'srt':
         download(`${baseName(job)}.srt`, toSRT(job));

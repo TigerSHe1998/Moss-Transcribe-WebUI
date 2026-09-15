@@ -274,9 +274,40 @@ details[open] summary { margin-bottom: 10px; }
 
 .result-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 
-/* 毫秒精度开关：操作行最右侧，激活时绿色描边 */
-.ms-toggle { margin-left: auto; color: var(--muted); }
-.ms-toggle.on { color: var(--green); border-color: #a7f3d0; background: #ecfdf5; }
+/* 毫秒精度开关：toggle 在左、文字在右，整体靠操作行右缘 */
+.ms-toggle {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.ms-toggle-track {
+  width: 34px;
+  height: 18px;
+  background: #d1d5db;
+  border-radius: 999px;
+  position: relative;
+  transition: background .15s ease;
+  flex-shrink: 0;
+}
+.ms-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  transition: left .15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .2);
+}
+.ms-toggle.on .ms-toggle-track { background: var(--green); }
+.ms-toggle.on .ms-toggle-knob { left: 18px; }
+.ms-toggle.on .ms-toggle-text { color: var(--green); }
 
 /* 回听播放器（方形进度条） */
 .player { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
