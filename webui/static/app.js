@@ -475,38 +475,52 @@ function wirePlayer(card, j) {
     });
   }
 
-  // 说话人别名：点时间轴名字就地改名；提交后就地改写该说话人的所有
-  // 徽章（不重建卡片），别名存 localStorage 供导出与刷新后渲染使用
-  card.querySelectorAll('.tl-label').forEach((label) => {
-    label.addEventListener('click', () => {
-      if (label.querySelector('input')) return; // 已在编辑中
+  // 说话人别名：点 ✎ 弹小窗改名；确认后就地改写该说话人的所有徽章
+  // （不重建卡片），别名存 localStorage 供导出与刷新后渲染使用
+  card.querySelectorAll('.tl-edit').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const label = btn.closest('.tl-label');
       const sid = +label.dataset.sid;
-      const input = document.createElement('input');
-      input.className = 'tl-name-input';
-      input.value = label.textContent;
-      label.textContent = '';
-      label.appendChild(input);
+      const current = speakerName(buildSpeakerMap(j.result), sid, loadAliases(j.id));
+
+      const overlay = document.createElement('div');
+      overlay.className = 'name-dialog-overlay';
+      overlay.innerHTML = `
+        <div class="name-dialog" role="dialog" aria-label="修改说话人名称">
+          <div class="name-dialog-title">修改「${esc(current)}」的名称</div>
+          <input class="name-dialog-input" type="text" maxlength="24"
+                 placeholder="留空则恢复默认名称">
+          <div class="name-dialog-actions">
+            <button class="btn mini name-dialog-cancel">取消</button>
+            <button class="btn mini primary name-dialog-ok">确认</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+      const input = overlay.querySelector('.name-dialog-input');
+      input.value = loadAliases(j.id).get(sid) ?? '';
       input.focus();
       input.select();
-      let cancelled = false;
-      const commit = (save) => {
-        if (save) {
-          const val = input.value.trim();
-          const aliases = loadAliases(j.id);
-          if (val) aliases.set(sid, val);
-          else aliases.delete(sid);
-          saveAliases(j.id, aliases);
-        }
-        const name = speakerName(buildSpeakerMap(j.result), sid, loadAliases(j.id));
-        label.textContent = name;
+
+      const close = () => overlay.remove();
+      const commit = () => {
+        const val = input.value.trim();
+        const aliases = loadAliases(j.id);
+        if (val) aliases.set(sid, val);
+        else aliases.delete(sid);
+        saveAliases(j.id, aliases);
+        const name = speakerName(buildSpeakerMap(j.result), sid, aliases);
+        label.querySelector('.tl-name').textContent = name;
         card.querySelectorAll(`.seg-speaker[data-sid="${sid}"]`)
           .forEach((el) => { el.textContent = name; });
+        close();
       };
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') input.blur();
-        else if (e.key === 'Escape') { cancelled = true; input.blur(); }
+      overlay.querySelector('.name-dialog-ok').addEventListener('click', commit);
+      overlay.querySelector('.name-dialog-cancel').addEventListener('click', close);
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+      overlay.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') commit();
+        else if (e.key === 'Escape') close();
       });
-      input.addEventListener('blur', () => commit(!cancelled), { once: true });
     });
   });
 }
@@ -648,7 +662,7 @@ function timeline(r, spMap, ms = false, aliases = null) {
     const num = spMap.get(sid) ?? 1;
     return `
     <div class="tl-row">
-      <div class="tl-label" data-sid="${sid}" title="点击修改说话人名称">${esc(speakerName(spMap, sid, aliases))}</div>
+      <div class="tl-label" data-sid="${sid}"><span class="tl-name">${esc(speakerName(spMap, sid, aliases))}</span><button class="tl-edit" title="修改说话人名称">✎</button></div>
       <div class="tl-track">${list.map((s) =>
         `<div class="tl-bar" style="left:${(s.t0_ms / dur * 100).toFixed(2)}%;width:${Math.max((s.t1_ms - s.t0_ms) / dur * 100, 0.3).toFixed(2)}%;background:${speakerColor(num)}"
               data-t0="${s.t0_ms}" data-t1="${s.t1_ms}"${s.p != null ? ` data-p="${s.p}"` : ''}
