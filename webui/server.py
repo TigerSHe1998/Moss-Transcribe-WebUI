@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -53,6 +53,16 @@ def create_app(model_path: str, backend: str = "auto",
 
     app = FastAPI(title="Moss 转录 WebUI", lifespan=lifespan)
     app.state.engine = engine
+
+    # 页面与静态资源必须每次回源验证（未变化时仍是廉价的 304）。
+    # 不加此头时浏览器会启发式缓存，可能直接用旧 CSS 而不询问服务器，
+    # 导致"已修复的 bug 用户仍然看得到"。
+    @app.middleware("http")
+    async def revalidate_assets(request: Request, call_next):
+        response = await call_next(request)
+        if request.url.path == "/" or request.url.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
 
     # ---- 页面与状态 ----
 

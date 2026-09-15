@@ -211,6 +211,8 @@ function setFile(file) {
     $('file-size').textContent = fmtBytes(file.size);
   } else {
     chip.hidden = true;
+    $('file-name').textContent = '';
+    $('file-size').textContent = '';
     $('file-input').value = '';
   }
   updateStartBtn();
