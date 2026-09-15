@@ -282,7 +282,102 @@ const jobEls = new Map(); // job id -> { el, sig }
 
 function jobSig(j) {
   return JSON.stringify([j.status, j.detail, j.error, j.queue_position,
-    j.audio_ms, j.result ? j.result.segments.length : -1]);
+    j.audio_ms, j.has_audio, j.result ? j.result.segments.length : -1]);
+}
+
+// ---- 回听播放器 ----
+// 每张结果卡片一个隐藏 <audio>（preload=none，不点不下载）；进度条用
+// input[type=range]（原生支持拖拽）；播放中按当前时间高亮对应分段并
+// 保持其在列表内可见；同一时刻只允许一个卡片发声
+let activeAudio = null;
+
+function wirePlayer(card, j) {
+  const audio = card.querySelector('.job-audio');
+  if (!audio) return;
+  const toggle = card.querySelector('.player-toggle');
+  const seek = card.querySelector('.player-seek');
+  const timeEl = card.querySelector('.player-time');
+  const segList = card.querySelector('.seg-list');
+  const segEls = [...card.querySelectorAll('.seg')];
+  const noTs = j.params.timestamps === 'none';
+  const bounds = noTs ? [] : (j.result ? j.result.segments.map((s) => [s.t0_ms, s.t1_ms]) : []);
+  let pendingSeek = null; // preload=none 下 metadata 未加载时先记住目标位置
+
+  const paintBar = (pct) => {
+    seek.style.background = `linear-gradient(to right, var(--green) ${pct}%, #e5e7eb ${pct}%)`;
+  };
+  paintBar(0);
+
+  const setTimeText = (ms) => {
+    timeEl.textContent = `${fmtClock(ms)} / ${fmtClock(audio.duration * 1000 || j.audio_ms)}`;
+  };
+
+  const setActive = (ms) => {
+    if (!bounds.length) return;
+    let idx = -1;
+    for (let i = 0; i < bounds.length; i++) {
+      if (ms >= bounds[i][0] && ms < bounds[i][1]) { idx = i; break; }
+    }
+    if (idx < 0 && ms >= bounds[bounds.length - 1][1]) idx = bounds.length - 1;
+    segEls.forEach((el, i) => el.classList.toggle('active', i === idx));
+    // 仅在播放中滚动，让当前条保持可见；手动算 scrollTop 避免牵动整页
+    if (idx >= 0 && !audio.paused) {
+      const top = segEls[idx].offsetTop;
+      if (top < segList.scrollTop + 8 || top > segList.scrollTop + segList.clientHeight - 36) {
+        segList.scrollTop = top - segList.clientHeight / 2;
+      }
+    }
+  };
+
+  toggle.addEventListener('click', () => {
+    if (audio.paused) audio.play().catch(() => {});
+    else audio.pause();
+  });
+
+  card.querySelectorAll('.seg-play').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const t0 = +btn.dataset.t0 / 1000;
+      if (audio.readyState >= 1) audio.currentTime = t0;
+      else pendingSeek = t0;
+      audio.play().catch(() => {});
+    });
+  });
+
+  seek.addEventListener('input', () => {
+    const ms = +seek.value;
+    if (audio.readyState >= 1) audio.currentTime = ms / 1000;
+    else pendingSeek = ms / 1000;
+    setTimeText(ms);
+    paintBar(seek.max ? (ms / +seek.max) * 100 : 0);
+    setActive(ms);
+  });
+
+  audio.addEventListener('loadedmetadata', () => {
+    if (audio.duration && isFinite(audio.duration)) seek.max = Math.round(audio.duration * 1000);
+    if (pendingSeek != null) {
+      audio.currentTime = pendingSeek;
+      pendingSeek = null;
+    }
+  });
+  audio.addEventListener('timeupdate', () => {
+    const ms = audio.currentTime * 1000;
+    seek.value = Math.round(ms);
+    setTimeText(ms);
+    paintBar(seek.max ? (ms / +seek.max) * 100 : 0);
+    setActive(ms);
+  });
+  audio.addEventListener('play', () => {
+    toggle.textContent = '⏸';
+    if (activeAudio && activeAudio !== audio) activeAudio.pause();
+    activeAudio = audio;
+  });
+  audio.addEventListener('pause', () => { toggle.textContent = '▶'; });
+  audio.addEventListener('ended', () => {
+    toggle.textContent = '▶';
+    seek.value = 0;
+    paintBar(0);
+    segEls.forEach((el) => el.classList.remove('active'));
+  });
 }
 
 function renderJobs() {
@@ -300,6 +395,7 @@ function renderJobs() {
       else wrap.appendChild(card);
       entry = { el: card, sig };
       jobEls.set(j.id, entry);
+      wirePlayer(card, j);
     } else {
       // 已用时是唯一每秒变化的字段，单独更新文本节点
       const elapsed = entry.el.querySelector('[data-elapsed]');
@@ -358,6 +454,7 @@ function resultBlock(j) {
   const withDiarize = j.params.diarize === 'on';
   // timestamps='none' 时后端返回全零时间戳：隐藏时间列/时间轴/SRT，导出去掉时间前缀
   const noTs = j.params.timestamps === 'none';
+  const hasAudio = !!j.has_audio;
   const spMap = buildSpeakerMap(r);
 
   const meta = [
@@ -370,6 +467,7 @@ function resultBlock(j) {
 
   const segs = r.segments.length ? r.segments.map((s) => `
     <div class="seg">
+      ${hasAudio && !noTs ? `<button class="seg-play" data-t0="${s.t0_ms}" title="从此处播放">▶</button>` : ''}
       ${noTs ? '' : `<span class="seg-time">${fmtClock(s.t0_ms)} → ${fmtClock(s.t1_ms)}</span>`}
       ${withDiarize ? `<span class="seg-speaker" style="--sp:${speakerColor(spMap.get(s.speaker_id) ?? 1)}">${esc(speakerName(spMap, s.speaker_id))}</span>` : ''}
       <span class="seg-text">${esc(s.text)}</span>
@@ -379,6 +477,13 @@ function resultBlock(j) {
   return `
   <div class="result">
     <div class="result-meta">${esc(meta)}${j.detail ? ` · ${esc(j.detail)}` : ''}</div>
+    ${hasAudio ? `
+    <div class="player">
+      <button class="btn mini player-toggle" title="播放/暂停">▶</button>
+      <input class="player-seek" type="range" min="0" max="${j.audio_ms || 0}" value="0" step="50">
+      <span class="player-time">0:00 / ${fmtClock(j.audio_ms || 0)}</span>
+      <audio class="job-audio" src="/api/jobs/${esc(j.id)}/audio" preload="none"></audio>
+    </div>` : ''}
     ${withDiarize && !noTs ? timeline(r, spMap) : ''}
     <div class="result-actions">
       <button class="btn mini" data-action="copy">复制全文</button>

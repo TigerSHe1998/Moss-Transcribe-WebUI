@@ -156,6 +156,14 @@ def create_app(model_path: str) -> FastAPI:
             raise HTTPException(404, "任务不存在")
         return job
 
+    # 回听音频：FileResponse 原生支持 Range，前端进度条拖拽/分段跳转依赖它
+    @app.get("/api/jobs/{job_id}/audio")
+    def job_audio(job_id: str) -> FileResponse:
+        path = engine.audio_file(job_id)
+        if path is None:
+            raise HTTPException(404, "音频不存在或已清理")
+        return FileResponse(path, media_type="audio/wav")
+
     @app.post("/api/jobs/{job_id}/cancel")
     def cancel_job(job_id: str) -> dict:
         if not engine.cancel(job_id):

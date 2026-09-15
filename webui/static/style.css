@@ -247,6 +247,30 @@ details[open] summary { margin-bottom: 10px; }
 
 .result-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 
+/* 回听播放器（方形进度条） */
+.player { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.player-seek {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 10px;
+  margin: 0;
+  background: #e5e7eb;
+  border-radius: 0;
+  outline: none;
+  cursor: pointer;
+}
+.player-seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 16px;
+  background: var(--green);
+  border-radius: 0;
+  cursor: pointer;
+}
+.player-seek::-moz-range-thumb { width: 10px; height: 16px; background: var(--green); border: none; border-radius: 0; }
+.player-time { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
 /* 说话人时间轴 */
 .timeline {
   display: grid;
@@ -264,6 +288,7 @@ details[open] summary { margin-bottom: 10px; }
 
 /* 分段列表 */
 .seg-list {
+  position: relative; /* .seg offsetTop 的定位基准，播放器滚动跟随要用 */
   max-height: 420px;
   overflow-y: auto;
   border: 1px solid var(--border);
@@ -277,6 +302,22 @@ details[open] summary { margin-bottom: 10px; }
   align-items: baseline;
 }
 .seg:last-child { border-bottom: none; }
+.seg.active { background: #eef2ff; }
+.seg-play {
+  flex-shrink: 0;
+  align-self: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+}
+.seg-play:hover { background: #eef2ff; color: var(--accent); border-color: #c7d2fe; }
 .seg-time {
   flex-shrink: 0;
   font-family: Consolas, monospace;

@@ -82,6 +82,16 @@ def load_pcm(path: Path) -> np.ndarray:
         return np.frombuffer(wf.readframes(wf.getnframes()), dtype=np.int16).astype(np.float32) / 32768.0
 
 
+def write_mono_wav(path: Path, pcm: np.ndarray) -> None:
+    """回听音频：模型实际吃到的 16kHz 单声道数据存为 16-bit WAV（浏览器通吃）。"""
+    data = np.clip(pcm, -1.0, 1.0)
+    with wave.open(str(path), "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(SAMPLE_RATE)
+        wf.writeframes((data * 32767.0).astype(np.int16).tobytes())
+
+
 def _jsonable(obj: Any) -> Any:
     """NaN/Inf → None；Python json 默认输出 NaN 字面量，浏览器 JSON.parse 会失败。"""
     if isinstance(obj, float):
@@ -122,6 +132,7 @@ class Job:
     started: Optional[float] = None
     finished: Optional[float] = None
     result: Optional[dict] = None
+    audio_path: Optional[str] = None  # 回听 WAV（uploads/{id}.wav），随任务删除清理
 
     def to_dict(self, queue_position: Optional[int] = None) -> dict:
         d = {
@@ -136,6 +147,7 @@ class Job:
             "finished": self.finished,
             "params": self.params,
             "queue_position": queue_position,
+            "has_audio": bool(self.audio_path and Path(self.audio_path).is_file()),
         }
         if self.result is not None:
             d["result"] = self.result
@@ -337,6 +349,8 @@ class Engine:
         job = self._jobs.pop(job_id, None)
         if job is not None:
             Path(job.stored_path).unlink(missing_ok=True)
+            if job.audio_path:
+                Path(job.audio_path).unlink(missing_ok=True)
         if job_id in self._order:
             self._order.remove(job_id)
 
@@ -361,6 +375,13 @@ class Engine:
                 pos = sum(1 for jid in self._order[:self._order.index(job_id)]
                           if self._jobs[jid].status == "queued") + 1
             return job.to_dict(pos)
+
+    def audio_file(self, job_id: str) -> Optional[Path]:
+        """回听 WAV 路径；任务不存在或文件已清理返回 None。"""
+        with self._jobs_lock:
+            job = self._jobs.get(job_id)
+            path = Path(job.audio_path) if job is not None and job.audio_path else None
+        return path if path is not None and path.is_file() else None
 
     def cancel(self, job_id: str) -> bool:
         with self._jobs_lock:
@@ -455,6 +476,14 @@ class Engine:
                     job.status = "cancelled"
                     job.finished = time.time()
                     return
+
+                # 回听音频落盘（约 32KB/s；失败不阻断转录，只是无回听）
+                wav_path = self.upload_dir / f"{job.id}.wav"
+                try:
+                    write_mono_wav(wav_path, pcm)
+                    job.audio_path = str(wav_path)
+                except OSError as e:
+                    log.warning("写回听音频失败 %s: %s", wav_path, e)
 
                 job.status = "running"
                 job.detail = ""
