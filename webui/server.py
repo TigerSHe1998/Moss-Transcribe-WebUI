@@ -174,15 +174,15 @@ def create_app(model_path: str, backend: str = "auto",
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Moss 转录 WebUI")
-    parser.add_argument("--host", default="127.0.0.1",
-                        help="监听地址；局域网访问用 0.0.0.0（默认 127.0.0.1）")
-    parser.add_argument("--port", type=int, default=8390)
-    parser.add_argument("-m", "--model", default=DEFAULT_MODEL, help="GGUF 模型路径")
+    parser = argparse.ArgumentParser(description="Moss Transcribe WebUI")
+    parser.add_argument("--host", default="127.0.0.1", help="bind address (default 127.0.0.1)")
+    parser.add_argument("--port", type=int, default=8390, help="port (default 8390)")
+    parser.add_argument("-m", "--model", default=DEFAULT_MODEL, help="path to GGUF model")
     parser.add_argument("--backend", default="auto",
-                        choices=["auto", "cpu", "metal", "vulkan", "cpu_accel", "cuda", "rocm"])
+                        choices=["auto", "cpu", "metal", "vulkan", "cpu_accel", "cuda", "rocm"],
+                        help="compute backend (default auto)")
     parser.add_argument("--device-index", type=int, default=None,
-                        help="backends() 返回的设备索引（按 status 中的顺序）")
+                        help="device index as listed in /api/status")
     args = parser.parse_args()
 
     logging.basicConfig(
