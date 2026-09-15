@@ -43,13 +43,13 @@ class ModelRequest(BaseModel):
     device_index: int | None = None
 
 
-def create_app(model_path: str, backend: str = "auto",
-               device_index: int | None = None) -> FastAPI:
+def create_app(model_path: str) -> FastAPI:
     engine = Engine(model_path)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
-        engine.start(backend, device_index)
+        # 后端/设备经 UI 或 POST /api/model 切换；启动固定 auto
+        engine.start()
         yield
 
     app = FastAPI(title="Moss 转录 WebUI", lifespan=lifespan)
@@ -178,11 +178,6 @@ def main() -> None:
     parser.add_argument("--host", default="127.0.0.1", help="bind address (default 127.0.0.1)")
     parser.add_argument("--port", type=int, default=8390, help="port (default 8390)")
     parser.add_argument("-m", "--model", default=DEFAULT_MODEL, help="path to GGUF model")
-    parser.add_argument("--backend", default="auto",
-                        choices=["auto", "cpu", "metal", "vulkan", "cpu_accel", "cuda", "rocm"],
-                        help="compute backend (default auto)")
-    parser.add_argument("--device-index", type=int, default=None,
-                        help="device index as listed in /api/status")
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -195,8 +190,8 @@ def main() -> None:
     if not Path(args.model).is_file():
         raise SystemExit(f"模型文件不存在: {args.model}")
 
-    app = create_app(args.model, args.backend, args.device_index)
-    logger.info("WebUI: http://%s:%d  (局域网请使用 --host 0.0.0.0)", args.host, args.port)
+    app = create_app(args.model)
+    logger.info("WebUI: http://%s:%d", args.host, args.port)
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 
 
