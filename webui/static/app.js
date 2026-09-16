@@ -201,17 +201,17 @@ function renderStatus() {
   // 运行信息
   const limits = status.limits;
   const info = [];
-  info.push(`模型: ${esc(m.variant || '-')}（${esc(m.arch || '-')}）`);
+  info.push(`模型名称: ${esc(m.variant || '-')}（${esc(m.arch || '-')}）`);
   if (m.path) {
     info.push(`模型文件: ${m.path}（${m.size_bytes ? fmtBytes(m.size_bytes) : '大小未知'}）`);
   }
-  info.push(`版本: transcribe_cpp ${esc(status.version)} / native ${esc(status.native_version)}`);
-  if (limits) info.push(`单次音频上限: 约 ${fmtMsZh(limits.effective_max_audio_ms)}`);
+  info.push(`后端版本: transcribe_cpp ${esc(status.version)} / native ${esc(status.native_version)}`);
+  if (limits) info.push(`单次音频上限: 约 ${fmtMsZh(limits.effective_max_audio_ms)}（引擎上限，实际请根据可用显存 / 内存判断）`);
   if (status.ffmpeg) {
-    const src = status.ffmpeg_source === 'bundled' ? '随仓库分发' : '系统 PATH';
-    info.push(`ffmpeg: 已安装（${src}，自动转码 16kHz 单声道）`);
+    const src = status.ffmpeg_source === 'bundled' ? 'bundled' : 'PATH';
+    info.push(`ffmpeg: 已激活（${src}）`);
   } else {
-    info.push('ffmpeg: 未安装（仅支持 16kHz 单声道 WAV，请放入 resources/ffmpeg/）');
+    info.push('ffmpeg: 未激活（仅支持 16kHz 单声道 WAV，请放入 resources/ffmpeg/）');
   }
   info.push(`当前任务: ${status.active_jobs} 个进行中`);
   $('info-body').innerHTML = info.map((l) => esc(l)).join('<br>');

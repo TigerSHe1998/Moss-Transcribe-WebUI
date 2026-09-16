@@ -1,14 +1,4 @@
 @echo off
-rem One-click environment setup for Moss Transcribe WebUI.
-rem NOTE: keep this file ASCII-only with CRLF line endings -
-rem       cmd.exe parses .bat in the ANSI codepage and needs CRLF.
-rem Assumes: Python 3.10+ on PATH, and these files already in place:
-rem   resources\model\MOSS-Transcribe-Diarize-Q8_0.gguf   (model)
-rem   resources\ffmpeg\ffmpeg.exe + ffprobe.exe           (ffmpeg)
-rem   resources\whl\transcribe_cpp_native_cu12-*.whl      (native wheel)
-rem
-rem Usage: double-click, or run from a terminal to keep the window open.
-
 setlocal
 cd /d "%~dp0"
 
@@ -62,7 +52,7 @@ set "WHEEL="
 for %%f in ("resources\whl\transcribe_cpp_native_cu12-*.whl") do set "WHEEL=%%f"
 if not defined WHEEL (
     echo [ERROR] No transcribe_cpp_native_cu12-*.whl found in resources\whl\
-    echo         Put the wheel there first (see resources\whl\#PUT_WHL_HERE).
+    echo         Put the wheel there first.
     goto :fail
 )
 echo [4/4] Installing local wheel: %WHEEL%

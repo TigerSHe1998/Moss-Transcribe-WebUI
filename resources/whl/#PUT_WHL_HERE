@@ -1,3 +1,5 @@
-把 transcribe_cpp_native_cu12 的 wheel 安装包（如 transcribe_cpp_native_cu12-0.2.3-py3-none-win_amd64.whl）放到本目录。
-创建 venv 后用 pip 安装：python -m pip install transcribe-cpp numpy fastapi uvicorn python-multipart <wheel文件名>
-（详见 README_WEBUI.md）
+把 transcribe_cpp_native_cu12 的 wheel 安装包（如 transcribe_cpp_native_cu12-0.2.3-py3-none-win_amd64.whl）放到本目录。可以从 transcribe.cpp 官方 repo 的 Releases 中下载：https://github.com/handy-computer/transcribe.cpp/releases
+
+---
+
+Place the transcribe_cpp_native_cu12 wheel package (e.g., transcribe_cpp_native_cu12-0.2.3-py3-none-win_amd64.whl) in this directory. It can be downloaded from the Releases page of the official transcribe.cpp repository: https://github.com/handy-computer/transcribe.cpp/releases

@@ -1,21 +1,18 @@
 # 虚拟环境
 .venv/
 
-# 二进制安装包（resources/whl/ 目录仅保留说明，二进制不入库）
-*.whl
-
-# 本地测试脚本与音频，不分发
+# 本地测试脚本与音频
 test/
 
-# 模型权重（GB 级大文件，不入库；占位提示文件入库）
+# whl 二进制安装包
+resources/whl/*.whl
+
+# MOSS 模型权重
 resources/model/*.gguf
 
-# ffmpeg 运行时二进制（用户自行放置到 resources/ffmpeg/，不入库；占位提示文件入库）
+# ffmpeg 运行时二进制
 resources/ffmpeg/*.exe
 resources/ffmpeg/*.dll
-
-# 个人笔记，不入库
-transcribe_cpp_notes.txt
 
 # Python 缓存
 __pycache__/
