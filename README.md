@@ -10,7 +10,7 @@
 
 ![ScreenShot_CN](readme_pic/ScreenShot_CN.png)
 
-### [前往下载](https://github.com/TigerSHe1998/Moss-Transcribe-WebUI/releases)
+[前往下载](https://github.com/TigerSHe1998/Moss-Transcribe-WebUI/releases)
 
 </div>
 
@@ -49,6 +49,7 @@ run_webui.bat          :: 启动后本机访问 http://127.0.0.1:8390
 - [X] **回听播放器**：播放/暂停、进度条拖拽、自动高亮对应文本并滚动跟随、时间轴色块跳转到对应条目
 - [ ] **English Support**：Todo
 - [ ] **CLI 供 Agent 快速转录**：Todo
+- [ ] **热词支持**：transcribe.cpp 后端暂未适配 Moss 模型的热词输入，上游适配后跟进
 
 ## 其他说明
 
