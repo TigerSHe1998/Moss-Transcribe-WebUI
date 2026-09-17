@@ -55,4 +55,3 @@ run_webui.bat          :: 启动后本机访问 http://127.0.0.1:8390
 
 - 依赖（fastapi / uvicorn / python-multipart / numpy / transcribe-cpp）默认装入 `.venv`，不影响全局环境
 - 任务结果服务重启后清空；回听音频在 `uploads/`，随任务删除或服务重启自动清理
-- 后端接口详情见 [transcribe_cpp_api.md](transcribe_cpp_api.md)

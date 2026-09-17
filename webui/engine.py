@@ -1,6 +1,6 @@
 """WebUI 核心引擎：模型加载/重载、任务队列、ffmpeg 转码、取消。
 
-并发模型（对应 transcribe.cpp 0.x 的限制，见 transcribe_cpp_api.md §13）：
+并发模型（对应 transcribe.cpp 0.x 的限制）：
 - 一个 Model 同时只能有一个 run 在飞，因此所有推理由单个 worker 线程串行执行；
 - 模型重载与推理共用 _run_lock 互斥，重载会等当前 run 结束，期间新任务排队；
 - 取消：排队中的任务直接标记取消；转码/推理中的任务设置 cancel_requested，
