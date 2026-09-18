@@ -92,6 +92,7 @@ def create_app(model_path: str) -> FastAPI:
         kv_type: str = Form("auto"),
         n_threads: int = Form(0),
         n_ctx: int = Form(0),
+        chunk_min: int = Form(0),
     ):
         if timestamps not in ("none", "auto", "segment"):
             raise HTTPException(400, f"不支持的时间戳选项 {timestamps!r}，可选: none/auto/segment")
@@ -101,6 +102,8 @@ def create_app(model_path: str) -> FastAPI:
             raise HTTPException(400, f"不支持的 KV 类型 {kv_type!r}")
         if n_threads < 0 or n_ctx < 0:
             raise HTTPException(400, "n_threads / n_ctx 不能为负数")
+        if chunk_min != 0 and not 1 <= chunk_min <= 180:
+            raise HTTPException(400, "分段时长须为 0（关闭）或 1-180 分钟")
 
         if engine.state == "error":
             raise HTTPException(409, f"模型当前不可用: {engine.error}，请先切换设备重新加载")
@@ -118,14 +121,16 @@ def create_app(model_path: str) -> FastAPI:
             if size == 0:
                 raise HTTPException(400, "空文件")
 
-            # ffprobe 时长预检，超长直接拒绝，不进入队列
+            # ffprobe 时长预检，超长直接拒绝，不进入队列；
+            # 自动分段开启时跳过整文件上限（靠切分处理，每段仍受
+            # 引擎逐任务上限约束）
             est_ms = await run_in_threadpool(probe_duration_ms, dest)
             limit = engine.max_audio_ms
-            if est_ms and limit and est_ms > limit:
+            if not chunk_min and est_ms and limit and est_ms > limit:
                 raise HTTPException(
                     422,
                     f"音频约 {fmt_ms(est_ms)}，超过模型单次处理上限 {fmt_ms(limit)}，"
-                    f"请裁剪后再上传",
+                    f"请裁剪后再上传，或在转录设置中开启自动分段",
                 )
 
             params = {
@@ -134,9 +139,11 @@ def create_app(model_path: str) -> FastAPI:
                 "kv_type": kv_type,
                 "n_threads": n_threads,
                 "n_ctx": n_ctx,
+                "chunk_min": chunk_min,
             }
-            job = engine.submit(dest, file.filename or dest.name, params)
-            return {"job_id": job.id}
+            jobs = await run_in_threadpool(
+                engine.submit_audio, dest, file.filename or dest.name, params)
+            return {"job_id": jobs[0].id, "job_ids": [j.id for j in jobs], "count": len(jobs)}
         except HTTPException:
             dest.unlink(missing_ok=True)
             raise

@@ -356,6 +356,56 @@ class Engine:
         self._queue.put(job.id)
         return job
 
+    def submit_audio(self, stored_path: Path, filename: str, params: dict) -> list[Job]:
+        """上传入口：按需自动分段后入队。
+
+        开启分段（params.chunk_min > 0）且时长超过窗口时，ffmpeg 一趟切分
+        为多段、每段一个任务（说话人编号/别名跨段不互通，UI 有说明）。
+        阈值留 5 秒裕量：分段落在包边界上可略超窗口，不留给裕量会在
+        子任务上触发二次切分，切出几秒的尾巴段。切分失败按单文件提交，
+        由后续转码/上限检查给出原有错误。
+        """
+        chunk_min = int(params.get("chunk_min") or 0)
+        if chunk_min > 0:
+            est = probe_duration_ms(stored_path)
+            if est and est > (chunk_min * 60 + 5) * 1000:
+                try:
+                    segs = self._split_audio(stored_path, chunk_min)
+                except Exception as e:
+                    log.warning("自动分段失败，按单文件提交 %s: %s", filename, e)
+                else:
+                    stored_path.unlink(missing_ok=True)
+                    if len(segs) == 1:  # 时长估算偏大，实际没超窗口
+                        return [self.submit(segs[0], filename, params)]
+                    n = len(segs)
+                    return [self.submit(s, f"{filename} · 第{i}/{n}段", params)
+                            for i, s in enumerate(segs, 1)]
+        return [self.submit(stored_path, filename, params)]
+
+    def _split_audio(self, src: Path, chunk_min: int) -> list[Path]:
+        """ffmpeg segment 复用器一趟完成解码 + 重采样 16kHz 单声道 + 固定
+        窗口切分，顺序落盘 uploads/。返回按时间排序的分段文件；失败时
+        清理半成品并抛错（由调用方决定回落）。"""
+        exe = find_tool("ffmpeg")
+        if exe is None:
+            raise RuntimeError("未找到 ffmpeg，无法自动分段")
+        prefix = self.upload_dir / f"seg_{uuid.uuid4().hex[:12]}"
+        cmd = [
+            exe, "-v", "error", "-y", "-i", str(src),
+            "-vn", "-sn", "-dn", "-ar", str(SAMPLE_RATE), "-ac", "1",
+            "-c:a", "pcm_s16le", "-f", "segment",
+            "-segment_time", str(chunk_min * 60),
+            f"{prefix}_%03d.wav",
+        ]
+        proc = subprocess.run(cmd, capture_output=True)
+        segs = sorted(self.upload_dir.glob(f"{prefix.name}_*.wav"))
+        if proc.returncode != 0 or not segs:
+            for s in segs:
+                s.unlink(missing_ok=True)
+            detail = proc.stderr.decode("utf-8", "replace").strip()[:300]
+            raise RuntimeError(f"ffmpeg 分段失败: {detail}" if detail else "ffmpeg 分段失败（无输出）")
+        return segs
+
     def _prune_locked(self) -> None:
         finished = [jid for jid in self._order
                     if self._jobs[jid].status in ("done", "error", "cancelled")]

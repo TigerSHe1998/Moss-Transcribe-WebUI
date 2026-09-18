@@ -242,7 +242,7 @@ function setFile(file) {
 }
 
 // fetch 拿不到上传进度，提交大文件必须用 XHR 的 upload.onprogress
-function uploadWithProgress(fd, onProgress) {
+function uploadWithProgress(fd, onProgress, onUploaded) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/jobs');
@@ -250,6 +250,9 @@ function uploadWithProgress(fd, onProgress) {
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(e.loaded / e.total);
     };
+    // 上传完毕后服务器可能还要分段/预检几秒（开启自动分段的长音频），
+    // 提示语从"上传中"切换过去，避免进度条停在 100% 干等
+    if (onUploaded) xhr.upload.onload = () => onUploaded();
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve(xhr.response);
@@ -277,6 +280,7 @@ async function startTranscribe() {
   fd.append('kv_type', $('opt-kv').value);
   fd.append('n_threads', $('opt-threads').value || '0');
   fd.append('n_ctx', $('opt-ctx').value || '0');
+  fd.append('chunk_min', $('opt-chunk').value || '0');
 
   const btn = $('start-btn');
   const bar = $('upload-progress');
@@ -291,9 +295,13 @@ async function startTranscribe() {
   };
   paint(0);
   try {
-    await uploadWithProgress(fd, paint);
+    const r = await uploadWithProgress(fd, paint, () => {
+      paint(1);
+      label.textContent = '服务器处理中…';
+      btn.textContent = '处理中…';
+    });
     setFile(null);
-    toast('已加入任务队列');
+    toast(r.count > 1 ? `音频已切分为 ${r.count} 个分段任务并加入队列` : '已加入任务队列');
   } catch (e) {
     toast(`提交失败: ${e.message}`, true);
   } finally {

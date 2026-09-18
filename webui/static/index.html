@@ -47,6 +47,16 @@
           <option value="off">关闭</option>
         </select>
       </label>
+      <label class="field">长音频自动分段
+        <select id="opt-chunk">
+          <option value="0">关闭</option>
+          <option value="15">15分钟（推荐显存 8G）</option>
+          <option value="30">30分钟（推荐显存 12G）</option>
+          <option value="45">45分钟（推荐显存 16G）</option>
+          <option value="60">60分钟（推荐显存 20G）</option>
+        </select>
+      </label>
+      <p class="note">显存不足时，可开启音频自动分段降低显存压力；自动分段产生的转录结果之间说话人序号和别名不会同步，需手动设置。</p>
       <details>
         <summary>高级设置</summary>
         <label class="field">KV 缓存类型
@@ -104,6 +114,6 @@
 </main>
 
 <div id="toast" hidden></div>
-<script src="/static/app.js?v=20260915v"></script>
+<script src="/static/app.js?v=20260918w"></script>
 </body>
 </html>
