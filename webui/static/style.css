@@ -99,17 +99,7 @@ main {
   align-items: start;
 }
 
-/* sticky 悬停时若侧栏高于视口，底部卡片会一直够不着（长任务列表页尤甚）：
-   允许侧栏内部滚动兜底，内容不超高时无任何视觉变化 */
-aside {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  position: sticky;
-  top: 76px;
-  max-height: calc(100vh - 92px);
-  overflow-y: auto;
-}
+aside { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 76px; }
 
 .card {
   background: var(--card);
@@ -497,5 +487,5 @@ details[open] summary { margin-bottom: 10px; }
 
 @media (max-width: 960px) {
   main { grid-template-columns: 1fr; }
-  aside { position: static; max-height: none; overflow: visible; }
+  aside { position: static; }
 }
