@@ -2,6 +2,8 @@
 
 # Moss Transcribe WebUI for transcribe.cpp
 
+**中文** | [English](README_EN.md)
+
 基于 `transcribe.cpp` + `Moss-Transcribe-Diarize` 的**本地高性能**语音转写 WebUI，支持毫秒级时间戳与说话人分离。导入任意格式视频或音频，输出 TXT、SRT 或 JSON 转录结果，**GPU 加速 Ready**，4分钟音频推理只需10秒钟。
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
@@ -47,7 +49,9 @@ run_webui.bat          :: 启动后本机访问 http://127.0.0.1:8390
 - [X] **说话人别名**：点时间轴名字旁的 ✎ 可将「说话人 1」改为任意名字（如 Sam）
 - [X] **时间戳精度**：结果卡片支持调整「显示毫秒级时间戳」开关（默认秒级）
 - [X] **回听播放器**：播放/暂停、进度条拖拽、自动高亮对应文本并滚动跟随、时间轴色块跳转到对应条目
-- [ ] **English Support**：Todo
+- [X] **长音频自动分段**：显存不足时开启，超长音频按所选窗口（15/30/45/60 分钟）自动切分为多个任务排队
+- [X] **批量上传**：开启「批量模式」后支持一次选择多个文件，逐个自动上传排队
+- [X] **中英双语界面**：标题栏一键切换界面语言（中文 / English）
 - [ ] **CLI 供 Agent 快速转录**：Todo
 - [ ] **热词支持**：transcribe.cpp 后端暂未适配 Moss 模型的热词输入，上游适配后跟进
 
