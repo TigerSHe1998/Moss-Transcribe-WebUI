@@ -172,6 +172,9 @@ details[open] summary { margin-bottom: 10px; }
 .btn.mini { padding: 3px 10px; font-size: 12.5px; }
 
 /* 上传区 */
+/* 标题行与批量模式开关同行：开关复用 .ms-toggle（自带 margin-left:auto 右对齐） */
+#upload-card h2 { display: flex; align-items: center; }
+
 #dropzone {
   border: 2px dashed #cbd5e1;
   border-radius: var(--radius);

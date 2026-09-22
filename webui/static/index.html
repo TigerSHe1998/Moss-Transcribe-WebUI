@@ -6,7 +6,7 @@
 <title>Moss Transcribe WebUI</title>
 <link rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙️</text></svg>">
-<link rel="stylesheet" href="/static/style.css?v=20260918b">
+<link rel="stylesheet" href="/static/style.css?v=20260918c">
 </head>
 <body>
 <header>
@@ -89,7 +89,13 @@
 
   <section id="content">
     <div class="card" id="upload-card">
-      <h2>上传媒体</h2>
+      <h2>上传媒体
+        <label class="ms-toggle" id="batch-toggle" title="支持文件多选上传">
+          <span class="ms-toggle-track"><span class="ms-toggle-knob"></span></span>
+          <span class="ms-toggle-text">批量模式</span>
+          <input type="checkbox" hidden>
+        </label>
+      </h2>
       <div id="dropzone" tabindex="0">
         <div class="dz-title">拖拽文件到此处，或点击选择</div>
         <div class="dz-hint" id="dz-hint"></div>
@@ -114,6 +120,6 @@
 </main>
 
 <div id="toast" hidden></div>
-<script src="/static/app.js?v=20260918w"></script>
+<script src="/static/app.js?v=20260918x"></script>
 </body>
 </html>

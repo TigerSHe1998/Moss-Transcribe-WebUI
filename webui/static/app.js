@@ -13,7 +13,7 @@ const SPEAKER_COLORS = ['#6366f1', '#059669', '#d97706', '#dc2626',
 
 let status = null;
 let jobs = [];
-let selectedFile = null;
+let selectedFiles = [];  // 批量模式下可同时持有多个待上传文件
 let pollTimer = null;
 
 // ---- 基础工具 ----
@@ -220,22 +220,31 @@ function renderStatus() {
 }
 
 function updateStartBtn() {
-  $('start-btn').disabled = !selectedFile || status?.model?.state !== 'ready';
+  $('start-btn').disabled = !selectedFiles.length || status?.model?.state !== 'ready';
 }
 
 // ---- 上传 ----
 
-function setFile(file) {
-  selectedFile = file;
+// files: File 数组（单个也走数组，统一状态）；null 等价清空
+function setFiles(files) {
+  selectedFiles = files ? [...files] : [];
   const chip = $('file-chip');
-  if (file) {
+  if (selectedFiles.length === 1) {
     chip.hidden = false;
-    $('file-name').textContent = file.name;
-    $('file-size').textContent = fmtBytes(file.size);
+    $('file-name').textContent = selectedFiles[0].name;
+    $('file-size').textContent = fmtBytes(selectedFiles[0].size);
+    chip.title = '';
+  } else if (selectedFiles.length > 1) {
+    chip.hidden = false;
+    const total = selectedFiles.reduce((a, f) => a + f.size, 0);
+    $('file-name').textContent = `已选 ${selectedFiles.length} 个文件`;
+    $('file-size').textContent = fmtBytes(total);
+    chip.title = selectedFiles.map((f) => f.name).join('\n'); // 悬浮看清单
   } else {
     chip.hidden = true;
     $('file-name').textContent = '';
     $('file-size').textContent = '';
+    chip.title = '';
     $('file-input').value = '';
   }
   updateStartBtn();
@@ -268,49 +277,71 @@ function uploadWithProgress(fd, onProgress, onUploaded) {
 }
 
 async function startTranscribe() {
-  if (!selectedFile) return;
+  if (!selectedFiles.length) return;
   if (status?.model?.state !== 'ready') {
     toast('模型尚未就绪，请稍候', true);
     return;
   }
-  const fd = new FormData();
-  fd.append('file', selectedFile);
-  fd.append('timestamps', $('opt-timestamps').value);
-  fd.append('diarize', $('opt-diarize').value);
-  fd.append('kv_type', $('opt-kv').value);
-  fd.append('n_threads', $('opt-threads').value || '0');
-  fd.append('n_ctx', $('opt-ctx').value || '0');
-  fd.append('chunk_min', $('opt-chunk').value || '0');
+  const files = [...selectedFiles];
+  const multi = files.length > 1;
+  const formVals = {
+    timestamps: $('opt-timestamps').value,
+    diarize: $('opt-diarize').value,
+    kv_type: $('opt-kv').value,
+    n_threads: $('opt-threads').value || '0',
+    n_ctx: $('opt-ctx').value || '0',
+    chunk_min: $('opt-chunk').value || '0',
+  };
 
   const btn = $('start-btn');
   const bar = $('upload-progress');
   const fill = $('upload-fill');
   const label = $('upload-label');
   btn.disabled = true;
-  btn.textContent = '上传中…';
   bar.hidden = false;
-  const paint = (pct) => {
-    fill.style.width = (pct * 100).toFixed(1) + '%';
-    label.textContent = `上传中 ${(pct * 100).toFixed(0)}%`;
-  };
-  paint(0);
-  try {
-    const r = await uploadWithProgress(fd, paint, () => {
-      paint(1);
-      label.textContent = '服务器处理中…';
-      btn.textContent = '处理中…';
-    });
-    setFile(null);
-    toast(r.count > 1 ? `音频已切分为 ${r.count} 个分段任务并加入队列` : '已加入任务队列');
-  } catch (e) {
-    toast(`提交失败: ${e.message}`, true);
-  } finally {
-    bar.hidden = true;
-    fill.style.width = '0';
-    btn.textContent = '开始转录';
-    updateStartBtn();
-    pollNow();
+
+  let okCount = 0, failCount = 0, jobTotal = 0, lastErr = null;
+  for (let i = 0; i < files.length; i++) {
+    const nth = multi ? ` (${i + 1}/${files.length})` : '';
+    btn.textContent = `上传中${nth}…`;
+    const paint = (pct) => {
+      fill.style.width = (pct * 100).toFixed(1) + '%';
+      label.textContent = `上传中${nth} ${(pct * 100).toFixed(0)}%`;
+    };
+    paint(0);
+
+    const fd = new FormData();
+    fd.append('file', files[i]);
+    for (const [k, v] of Object.entries(formVals)) fd.append(k, v);
+
+    try {
+      const r = await uploadWithProgress(fd, paint, () => {
+        paint(1);
+        label.textContent = `服务器处理中${nth}…`;
+        btn.textContent = `处理中${nth}…`;
+      });
+      okCount++;
+      jobTotal += r.count || 1;
+    } catch (e) {
+      failCount++; // 单个失败不中断，继续传后续文件
+      lastErr = e;
+    }
   }
+
+  setFiles(null);
+  if (!failCount) {
+    if (multi) toast(`${okCount} 个文件已加入队列${jobTotal > okCount ? `（切分后共 ${jobTotal} 个任务）` : ''}`);
+    else toast(jobTotal > 1 ? `音频已切分为 ${jobTotal} 个分段任务并加入队列` : '已加入任务队列');
+  } else if (!okCount) {
+    toast(`提交失败: ${lastErr?.message || '未知错误'}`, true);
+  } else {
+    toast(`${okCount} 个成功，${failCount} 个失败（${lastErr?.message || '未知错误'}）`, true);
+  }
+  bar.hidden = true;
+  fill.style.width = '0';
+  btn.textContent = '开始转录';
+  updateStartBtn();
+  pollNow();
 }
 
 async function switchDevice() {
@@ -733,9 +764,21 @@ function baseName(j) {
 
 // ---- 事件绑定 ----
 
+// 批量模式：开关只决定"能否一次选多个"；多选后逐个走同样的上传队列
+const batchToggle = $('batch-toggle');
+const batchInput = batchToggle.querySelector('input');
+batchInput.addEventListener('change', () => {
+  batchToggle.classList.toggle('on', batchInput.checked);
+  $('file-input').multiple = batchInput.checked;
+});
+
 $('dropzone').addEventListener('click', () => $('file-input').click());
-$('file-input').addEventListener('change', (e) => setFile(e.target.files[0] || null));
-$('file-clear').addEventListener('click', () => setFile(null));
+$('file-input').addEventListener('change', (e) => {
+  const list = [...e.target.files];
+  if (!list.length) return setFiles(null);
+  setFiles(batchInput.checked ? list : [list[0]]);
+});
+$('file-clear').addEventListener('click', () => setFiles(null));
 $('start-btn').addEventListener('click', startTranscribe);
 $('reload-btn').addEventListener('click', switchDevice);
 
@@ -744,7 +787,11 @@ const dz = $('dropzone');
   dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('drag'); }));
 ['dragleave', 'drop'].forEach((ev) =>
   dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('drag'); }));
-dz.addEventListener('drop', (e) => setFile(e.dataTransfer.files[0] || null));
+dz.addEventListener('drop', (e) => {
+  const list = [...e.dataTransfer.files];
+  if (!list.length) return;
+  setFiles(batchInput.checked ? list : [list[0]]);
+});
 
 $('jobs').addEventListener('click', async (e) => {
   const btn = e.target.closest('button[data-action]');
