@@ -41,6 +41,9 @@ header {
 
 header h1 { font-size: 18px; margin: 0; }
 
+/* 标题 + 语言切换按钮 */
+#header-left { display: flex; align-items: center; gap: 12px; }
+
 .chip {
   padding: 4px 12px;
   border-radius: 999px;
@@ -143,7 +146,9 @@ details { margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8p
 details summary { cursor: pointer; color: var(--muted); font-size: 13px; user-select: none; }
 details[open] summary { margin-bottom: 10px; }
 
-.note { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; word-break: break-all; }
+/* overflow-wrap:anywhere：长 URL/路径仍可断行，但英文单词不会被从中间切开
+   （break-all 会把英文 "memory" 切成 me/mory，中英混排下不可接受） */
+.note { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; word-break: normal; overflow-wrap: anywhere; }
 
 /* 侧栏底部声明 */
 .decl { line-height: 1.7; }

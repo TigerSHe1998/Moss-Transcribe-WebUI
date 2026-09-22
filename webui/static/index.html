@@ -6,13 +6,16 @@
 <title>Moss Transcribe WebUI</title>
 <link rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙️</text></svg>">
-<link rel="stylesheet" href="/static/style.css?v=20260918c">
+<link rel="stylesheet" href="/static/style.css?v=20260922b">
 </head>
 <body>
 <header>
-  <h1>Moss Transcribe WebUI</h1>
+  <div id="header-left">
+    <h1>Moss Transcribe WebUI</h1>
+    <button id="lang-btn" class="btn tiny" title="切换界面语言">English</button>
+  </div>
   <div id="header-right">
-    <div id="model-chip" class="chip loading">初始化…</div>
+    <div id="model-chip" class="chip loading" data-i18n="chipInit">初始化…</div>
     <div id="mem-bar" class="mem-bar" title="" hidden>
       <div class="mem-fill" id="mem-fill"></div>
       <span class="mem-text" id="mem-text">—</span>
@@ -23,82 +26,82 @@
 <main>
   <aside>
     <div class="card">
-      <h2>推理设备</h2>
-      <label class="field">设备
+      <h2 data-i18n="h2Device">推理设备</h2>
+      <label class="field"><span data-i18n="lblDevice">设备</span>
         <select id="device-select">
-          <option value="auto">自动选择</option>
+          <option value="auto" data-i18n="autoSelect">自动选择</option>
         </select>
       </label>
-      <button id="reload-btn" class="btn secondary">切换设备（重载模型）</button>
+      <button id="reload-btn" class="btn secondary" data-i18n="btnReload">切换设备（重载模型）</button>
       <p id="device-note" class="note"></p>
     </div>
 
     <div class="card">
-      <h2>转录设置</h2>
-      <label class="field">时间戳
+      <h2 data-i18n="h2Settings">转录设置</h2>
+      <label class="field"><span data-i18n="lblTimestamps">时间戳</span>
         <select id="opt-timestamps">
-          <option value="segment">分段</option>
-          <option value="none">无</option>
+          <option value="segment" data-i18n="optSegment">分段</option>
+          <option value="none" data-i18n="optNone">无</option>
         </select>
       </label>
-      <label class="field">说话人分离
+      <label class="field"><span data-i18n="lblDiarize">说话人分离</span>
         <select id="opt-diarize">
-          <option value="on">开启</option>
-          <option value="off">关闭</option>
+          <option value="on" data-i18n="optOn">开启</option>
+          <option value="off" data-i18n="optOff">关闭</option>
         </select>
       </label>
-      <label class="field">长音频自动分段
+      <label class="field"><span data-i18n="lblChunk">长音频自动分段</span>
         <select id="opt-chunk">
-          <option value="0">关闭</option>
-          <option value="15">15分钟（推荐显存 8G）</option>
-          <option value="30">30分钟（推荐显存 12G）</option>
-          <option value="45">45分钟（推荐显存 16G）</option>
-          <option value="60">60分钟（推荐显存 20G）</option>
+          <option value="0" data-i18n="chunkOff">关闭</option>
+          <option value="15" data-i18n="chunk15">15分钟（推荐显存 8G）</option>
+          <option value="30" data-i18n="chunk30">30分钟（推荐显存 12G）</option>
+          <option value="45" data-i18n="chunk45">45分钟（推荐显存 16G）</option>
+          <option value="60" data-i18n="chunk60">60分钟（推荐显存 20G）</option>
         </select>
       </label>
-      <p class="note">显存不足时，可开启音频自动分段降低显存压力；自动分段产生的转录结果之间说话人序号和别名不会同步，需手动设置。</p>
+      <p class="note" data-i18n="noteChunk">显存不足时，可开启音频自动分段降低显存压力；自动分段产生的转录结果之间说话人序号和别名不会同步，需手动设置。</p>
       <details>
-        <summary>高级设置</summary>
-        <label class="field">KV 缓存类型
+        <summary data-i18n="advanced">高级设置</summary>
+        <label class="field"><span data-i18n="lblKv">KV 缓存类型</span>
           <select id="opt-kv">
             <option value="auto">auto</option>
             <option value="f32">f32</option>
             <option value="f16">f16</option>
           </select>
         </label>
-        <label class="field">CPU 线程数（0 = 默认）
+        <label class="field"><span data-i18n="lblThreads">CPU 线程数（0 = 默认）</span>
           <input id="opt-threads" type="number" min="0" max="128" value="0">
         </label>
-        <label class="field">上下文长度 n_ctx（0 = 默认）
+        <label class="field"><span data-i18n="lblCtx">上下文长度 n_ctx（0 = 默认）</span>
           <input id="opt-ctx" type="number" min="0" step="256" value="0">
         </label>
-        <p class="note">n_ctx 默认 131072，调小会降低单次音频的时长上限；线程数仅在 CPU 后端生效。</p>
+        <p class="note" data-i18n="noteCtx">n_ctx 默认 131072，调小会降低单次音频的时长上限；线程数仅在 CPU 后端生效。</p>
       </details>
     </div>
 
     <div class="card">
-      <h2>运行信息</h2>
+      <h2 data-i18n="h2Info">运行信息</h2>
       <div id="info-body" class="note">—</div>
     </div>
 
     <div class="card">
-      <h2>声明</h2>
-      <p class="note decl">本项目为<strong>完全免费</strong>的 Apache 2.0 协议开源项目，数据不上云，所有计算均在本地进行。唯一发布地址 <a href="https://github.com/TigerSHe1998/Moss-Transcribe-WebUI" target="_blank" rel="noopener">TigerSHe1998/Moss-Transcribe-WebUI</a>，若您从任何渠道付费获取此软件，请立刻申请退款。</p>
+      <h2 data-i18n="h2Decl">声明</h2>
+      <p class="note decl" data-i18n-html="declBody">本项目为<strong>完全免费</strong>的 Apache 2.0 协议开源项目，数据不上云，所有计算均在本地进行。唯一发布地址 <a href="https://github.com/TigerSHe1998/Moss-Transcribe-WebUI" target="_blank" rel="noopener">TigerSHe1998/Moss-Transcribe-WebUI</a>，若您从任何渠道付费获取此软件，请立刻申请退款。</p>
     </div>
   </aside>
 
   <section id="content">
     <div class="card" id="upload-card">
-      <h2>上传媒体
-        <label class="ms-toggle" id="batch-toggle" title="支持文件多选上传">
+      <h2><span data-i18n="h2Upload">上传媒体</span>
+        <label class="ms-toggle" id="batch-toggle" title="支持文件多选上传" data-i18n-title="titleBatch">
           <span class="ms-toggle-track"><span class="ms-toggle-knob"></span></span>
-          <span class="ms-toggle-text">批量模式</span>
+          <span class="ms-toggle-text" data-i18n="lblBatch">批量模式</span>
           <input type="checkbox" hidden>
         </label>
       </h2>
       <div id="dropzone" tabindex="0">
-        <div class="dz-title">拖拽文件到此处，或点击选择</div>
-        <div class="dz-hint" id="dz-hint"></div>
+        <div class="dz-title" data-i18n="dzTitle">拖拽文件到此处，或点击选择</div>
+        <div class="dz-hint" id="dz-hint" data-i18n="dzHint"></div>
         <input id="file-input" type="file"
                accept="audio/*,video/*,.wav,.mp3,.m4a,.flac,.ogg,.opus,.aac,.wma,.mp4,.mkv,.webm,.mov,.avi"
                hidden>
@@ -106,13 +109,13 @@
       <div id="file-chip" class="file-chip" hidden>
         <span id="file-name"></span>
         <span id="file-size" class="muted"></span>
-        <button id="file-clear" class="btn tiny" title="移除">✕</button>
+        <button id="file-clear" class="btn tiny" title="移除" data-i18n-title="removeFile">✕</button>
       </div>
       <div id="upload-progress" class="upload-progress" hidden>
         <div id="upload-fill" class="upload-fill"></div>
         <span id="upload-label" class="upload-label">上传中 0%</span>
       </div>
-      <button id="start-btn" class="btn primary" disabled>开始转录</button>
+      <button id="start-btn" class="btn primary" disabled data-i18n="btnStart">开始转录</button>
     </div>
 
     <div id="jobs"></div>
@@ -120,6 +123,6 @@
 </main>
 
 <div id="toast" hidden></div>
-<script src="/static/app.js?v=20260918x"></script>
+<script src="/static/app.js?v=20260922a"></script>
 </body>
 </html>
