@@ -4,13 +4,13 @@
 
 [中文](README.md) | **English**
 
-A **high-performance local** speech transcription WebUI built on `transcribe.cpp` + `Moss-Transcribe-Diarize`, with millisecond-level timestamps and speaker diarization. Import audio or video in any format and export TXT, SRT, or JSON transcripts. **GPU acceleration Ready** — a 4-minute audio takes only 10 seconds to transcribe.
+A **high-performance local** speech transcription WebUI built on [`transcribe.cpp`](https://github.com/handy-computer/transcribe.cpp) + [`Moss-Transcribe-Diarize`](https://github.com/OpenMOSS/MOSS-Transcribe-Diarize), with millisecond-level timestamps and speaker diarization. Import audio or video in any format and export TXT, SRT, or JSON transcripts. **GPU acceleration Ready** — a 4-minute audio takes only 10 seconds to transcribe.
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/TigerSHe1998/Moss-Transcribe-WebUI)](https://github.com/TigerSHe1998/Moss-Transcribe-WebUI/releases)
 [![Downloads](https://img.shields.io/github/downloads/TigerSHe1998/Moss-Transcribe-WebUI/total)](https://github.com/TigerSHe1998/Moss-Transcribe-WebUI/releases)
 
-![ScreenShot](readme_pic/ScreenShot_CN.png)
+![ScreenShot_EN](readme_pic/ScreenShot_EN.png)
 
 [Download](https://github.com/TigerSHe1998/Moss-Transcribe-WebUI/releases)
 
@@ -20,7 +20,7 @@ A **high-performance local** speech transcription WebUI built on `transcribe.cpp
 
 Python 3.10 or newer is required. Visit [python.org](https://www.python.org/downloads/).
 
-(If you use the quick-deploy package from Releases, the following files are already in place — just run the one-click script.)
+(If you use the quick-deploy package from Releases, the following files are already in place — just run the one-click setup script.)
 
 1. Put ffmpeg into the `resources\ffmpeg` folder. Guide: [FFMPEG_Guide](resources/ffmpeg/#PUT_FFMPEG_HERE)
 2. Put the MOSS-Transcribe-Diarize GGUF model into the `resources\model` folder. Guide: [GGUF_Guide](resources/model/#PUT_MOSS_GGUF_HERE)
@@ -49,10 +49,10 @@ Available options: `-h/--help`, `--host`, `--port`, `-m/--model` (GGUF path; def
 - [X] **Speaker aliases**: click the ✎ next to a timeline name to rename "Speaker 1" to anything (e.g. Sam)
 - [X] **Timestamp precision**: per-result toggle for millisecond-level timestamps (seconds by default)
 - [X] **Playback player**: play/pause, draggable seek bar, automatic highlighting with scroll-follow of the matching text, timeline-bar click to jump to an entry
-- [X] **Auto-split for long audio**: enabled when VRAM is tight — audio longer than the selected window (15/30/45/60 min) is automatically split into queued jobs
+- [X] **Auto-split for long audio**: useful for low VRAM hardware — audio longer than the selected window (15/30/45/60 min) is automatically split into queued jobs
 - [X] **Batch upload**: enable batch mode to select multiple files at once; they are uploaded and queued one by one
-- [X] **Bilingual UI (中文 / English)**: one-click language toggle in the header
-- [ ] **CLI for Agent transcription**: Todo
+- [X] **Multilanguage support (中文 / English)**: one-click language toggle in the header
+- [ ] **CLI for Agent use**: Todo
 - [ ] **Hotwords**: the transcribe.cpp backend does not yet support hotword input for Moss models; will follow once upstream lands
 
 ## Notes
