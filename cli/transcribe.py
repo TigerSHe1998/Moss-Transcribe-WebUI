@@ -506,9 +506,9 @@ class _Parser(argparse.ArgumentParser):
 
 def parse_args(argv):
     p = _Parser(prog=PROG,
-                description="One-shot transcription via Moss Transcribe WebUI. "
-                            "Attaches to a running WebUI service; starts a local "
-                            "one if needed (and stops it after).",
+                description="One-shot transcription CLI via Moss Transcribe WebUI. "
+                            "Attaches to a running WebUI service or starts a local "
+                            "one if needed.",
                 epilog=EXAMPLES, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("path", nargs="?", help="audio/video file to transcribe")
     p.add_argument("-b", "--batch", metavar="FOLDER",

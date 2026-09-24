@@ -40,19 +40,21 @@ run_webui.bat          :: 启动后本机访问 http://127.0.0.1:8390
 
 可用参数：`-h/--help`、`--host`、`--port`、`-m/--model`（GGUF 路径，默认加载 `resources/model/` 下的模型）。
 
-## 命令行（CLI）
+## 使用 CLI（高级用户）
 
-`cli\transcribe.bat` 提供无需打开浏览器的一键转录，适合脚本调用或 AI Agent 集成。将 `cli` 文件夹加入 PATH 后即可全局使用：
+`cli\transcribe.bat` 提供无需打开浏览器的一键转录，适合脚本调用或 AI Agent 集成。将 `cli` 文件夹加入 PATH 环境变量后即可便捷全局使用：
 
 ```bat
-transcribe meeting.wav                       :: 单文件转录（输出 meeting.txt）
-transcribe -b ./recordings --output all      :: 文件夹批量转录，输出 txt/srt/json
-transcribe voice.mp3 --autosplit 15          :: 长音频按 15 分钟自动分段
-transcribe --list-backend                    :: 列出可用推理后端
-transcribe voice.mp3 --host 192.168.50.2     :: 对接局域网内已运行的 WebUI 服务
+transcribe.bat meeting.wav                       :: 单文件转录（输出 meeting.txt）
+transcribe.bat --batch ./recordings --output all :: 文件夹批量转录，输出 txt/srt/json
+transcribe.bat --list-backend                    :: 列出可用推理后端
+transcribe.bat voice.mp3 --autosplit 15          :: 长音频按 15 分钟自动分段
+transcribe.bat voice.mp3 --host 192.168.50.2     :: 对接局域网内已运行的 WebUI 服务
 ```
 
-CLI 自动检测服务：已在运行则直接对接（结束后不关闭），本机无服务则自动启动并在完成后停止。完整参数见 `transcribe --help`。
+CLI 会自动检测 WebUI 服务是否存在：已在运行则直接对接，本机无服务则自动启动并在完成后停止。
+
+请运行 `transcribe.bat --help` 查看完整使用指南。
 
 ## Roadmap
 

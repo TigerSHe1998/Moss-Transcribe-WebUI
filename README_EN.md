@@ -40,19 +40,21 @@ run_webui.bat          :: serves at http://127.0.0.1:8390 after startup
 
 Available options: `-h/--help`, `--host`, `--port`, `-m/--model` (GGUF path; defaults to the model under `resources/model/`).
 
-## Command Line (CLI)
+## Using th CLI (Advanced Users)
 
 `cli\transcribe.bat` offers one-shot transcription without opening the browser — ideal for scripts and AI Agent integration. Add the `cli` folder to PATH for global availability:
 
 ```bat
-transcribe meeting.wav                       :: single file (writes meeting.txt)
-transcribe -b ./recordings --output all      :: batch a folder, export txt/srt/json
-transcribe voice.mp3 --autosplit 15          :: auto-split long audio every 15 min
-transcribe --list-backend                    :: list available inference backends
-transcribe voice.mp3 --host 192.168.50.2     :: use a WebUI service on the LAN
+transcribe.bat meeting.wav                       :: single file transcription (writes meeting.txt)
+transcribe.bat --batch ./recordings --output all :: batch a folder, writes txt/srt/json
+transcribe.bat --list-backend                    :: list available inference backends
+transcribe.bat voice.mp3 --autosplit 15          :: auto-split long audio every 15 minutes
+transcribe.bat voice.mp3 --host 192.168.50.2     :: use a WebUI service on the LAN
 ```
 
-The CLI detects the service automatically: if one is already running it attaches (and leaves it running afterwards); otherwise it starts a local service and stops it when finished. Run `transcribe --help` for all options.
+The CLI detects the service automatically: if one is already running it attaches (and leaves it running afterwards); otherwise it starts a local service and stops it when finished. 
+
+Run `transcribe.bat --help` for all options.
 
 ## Roadmap
 
