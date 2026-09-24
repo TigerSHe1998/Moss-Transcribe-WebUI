@@ -513,7 +513,7 @@ def parse_args(argv):
     p.add_argument("path", nargs="?", help="audio/video file to transcribe")
     p.add_argument("-b", "--batch", metavar="FOLDER",
                    help="transcribe all media files in FOLDER (top level only)")
-    p.add_argument("--timestamp", choices=["segments", "segment", "none"],
+    p.add_argument("--timestamp", choices=["segments", "none"],
                    default="segments", help="timestamp mode (default: segments)")
     p.add_argument("--diarize", choices=["on", "off"], default="on",
                    help="speaker diarization (default: on)")
@@ -616,6 +616,10 @@ def main(argv=None) -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(errors="replace", line_buffering=True)
         sys.stderr.reconfigure(errors="replace", line_buffering=True)
+    if argv is None:
+        argv = sys.argv[1:]
+    if not argv:   # 无任何参数：打印使用指南
+        parse_args(["--help"])
     args = parse_args(argv)
     files = validate(args)
     sys.exit(run(args, files))
