@@ -40,6 +40,20 @@ run_webui.bat          :: 启动后本机访问 http://127.0.0.1:8390
 
 可用参数：`-h/--help`、`--host`、`--port`、`-m/--model`（GGUF 路径，默认加载 `resources/model/` 下的模型）。
 
+## 命令行（CLI）
+
+`cli\transcribe.bat` 提供无需打开浏览器的一键转录，适合脚本调用或 AI Agent 集成。将 `cli` 文件夹加入 PATH 后即可全局使用：
+
+```bat
+transcribe meeting.wav                       :: 单文件转录（输出 meeting.txt）
+transcribe -b ./recordings --output all      :: 文件夹批量转录，输出 txt/srt/json
+transcribe voice.mp3 --autosplit 15          :: 长音频按 15 分钟自动分段
+transcribe --list-backend                    :: 列出可用推理后端
+transcribe voice.mp3 --host 192.168.50.2     :: 对接局域网内已运行的 WebUI 服务
+```
+
+CLI 自动检测服务：已在运行则直接对接（结束后不关闭），本机无服务则自动启动并在完成后停止。完整参数见 `transcribe --help`。
+
 ## Roadmap
 
 - [X] **推理设备热切换**：CUDA / Vulkan / CPU 后端可在页面内切换，无需重启
@@ -52,7 +66,7 @@ run_webui.bat          :: 启动后本机访问 http://127.0.0.1:8390
 - [X] **长音频自动分段**：显存不足时可启用，按所选窗口（15/30/45/60 分钟）自动将音频切分为多个任务排队
 - [X] **批量上传**：开启「批量模式」后支持一次选择多个文件，逐个自动上传排队
 - [X] **English Support**：一键切换界面语言（中文 / English）
-- [ ] **CLI 供 Agent 快速转录**：Todo
+- [X] **CLI 供 Agent 快速转录**：`cli\transcribe.bat` 一键转录（单文件 / 文件夹批量），自动对接或拉起 WebUI 服务，支持全部转录选项与远程服务
 - [ ] **热词支持**：transcribe.cpp 后端暂未适配 Moss 模型的热词输入，上游适配后跟进
 
 ## 其他说明

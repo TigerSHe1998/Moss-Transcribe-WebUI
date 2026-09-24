@@ -40,6 +40,20 @@ run_webui.bat          :: serves at http://127.0.0.1:8390 after startup
 
 Available options: `-h/--help`, `--host`, `--port`, `-m/--model` (GGUF path; defaults to the model under `resources/model/`).
 
+## Command Line (CLI)
+
+`cli\transcribe.bat` offers one-shot transcription without opening the browser — ideal for scripts and AI Agent integration. Add the `cli` folder to PATH for global availability:
+
+```bat
+transcribe meeting.wav                       :: single file (writes meeting.txt)
+transcribe -b ./recordings --output all      :: batch a folder, export txt/srt/json
+transcribe voice.mp3 --autosplit 15          :: auto-split long audio every 15 min
+transcribe --list-backend                    :: list available inference backends
+transcribe voice.mp3 --host 192.168.50.2     :: use a WebUI service on the LAN
+```
+
+The CLI detects the service automatically: if one is already running it attaches (and leaves it running afterwards); otherwise it starts a local service and stops it when finished. Run `transcribe --help` for all options.
+
 ## Roadmap
 
 - [X] **Hot device switching**: switch between CUDA / Vulkan / CPU backends in the UI, no restart needed
@@ -52,7 +66,7 @@ Available options: `-h/--help`, `--host`, `--port`, `-m/--model` (GGUF path; def
 - [X] **Auto-split for long audio**: useful for low VRAM hardware — audio longer than the selected window (15/30/45/60 min) is automatically split into queued jobs
 - [X] **Batch upload**: enable batch mode to select multiple files at once; they are uploaded and queued one by one
 - [X] **Multilanguage support (中文 / English)**: one-click language toggle in the header
-- [ ] **CLI for Agent use**: Todo
+- [X] **CLI for Agent use**: `cli\transcribe.bat` one-shot transcription (single file / folder batch), attaches to or starts a WebUI service automatically, supports all transcription options and remote services
 - [ ] **Hotwords**: the transcribe.cpp backend does not yet support hotword input for Moss models; will follow once upstream lands
 
 ## Notes
