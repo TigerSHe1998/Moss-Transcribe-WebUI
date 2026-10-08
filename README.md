@@ -45,16 +45,16 @@ run_webui.bat          :: 启动后本机访问 http://127.0.0.1:8390
 `cli\transcribe.bat` 提供无需打开浏览器的一键转录，适合脚本调用或 AI Agent 集成。将 `cli` 文件夹加入 PATH 环境变量后即可便捷全局使用：
 
 ```bat
-transcribe.bat meeting.wav                       :: 单文件转录（输出 meeting.txt）
-transcribe.bat --batch ./recordings --output all :: 文件夹批量转录，输出 txt/srt/json
-transcribe.bat --list-backend                    :: 列出可用推理后端
-transcribe.bat voice.mp3 --autosplit 15          :: 长音频按 15 分钟自动分段
-transcribe.bat voice.mp3 --host 192.168.50.2     :: 对接局域网内已运行的 WebUI 服务
+transcribe meeting.wav                       :: 单文件转录（输出 meeting.txt）
+transcribe --batch ./recordings --output all :: 文件夹批量转录，输出 txt/srt/json
+transcribe --list-backend                    :: 列出可用推理后端
+transcribe voice.mp3 --autosplit 15          :: 长音频按 15 分钟自动分段
+transcribe voice.mp3 --host 192.168.50.2     :: 对接局域网内已运行的 WebUI 服务
 ```
 
 CLI 会自动检测 WebUI 服务是否存在：已在运行则直接对接，本机无服务则自动启动并在完成后停止。
 
-请运行 `transcribe.bat --help` 查看完整使用指南。
+请运行 `transcribe --help` 查看完整使用指南。
 
 ## Roadmap
 
