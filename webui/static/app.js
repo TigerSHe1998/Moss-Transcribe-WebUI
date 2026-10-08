@@ -68,6 +68,9 @@ const I18N = {
     toastBatchMixed: '{ok} 个成功，{fail} 个失败（{err}）',
     toastSubmitFail: '提交失败: {msg}', toastModelNotReady: '模型尚未就绪，请稍候',
     toastUploadCancelled: '已取消上传',
+    warnFileTooBig: '文件 {name} 大小 {size}，超过上传上限 8 GB，未上传',
+    warnAudioTooLong: '文件 {name} 时长约 {dur}，超过单次处理上限 {limit}。可开启「长音频自动分段」后再上传，或裁剪音频',
+    warnBatchSkipped: '{n} 个文件未上传（见提示）',
     toastCancelled: '已请求取消', toastCopied: '已复制到剪贴板',
     toastOpFail: '操作失败: {msg}', toastWaitJobs: '请等待任务结束再切换设备',
     toastReloading: '开始重载模型…', toastSwitchFail: '切换失败: {msg}',
@@ -128,6 +131,9 @@ const I18N = {
     toastBatchMixed: '{ok} succeeded, {fail} failed ({err})',
     toastSubmitFail: 'Submit failed: {msg}', toastModelNotReady: 'Model not ready yet, please wait',
     toastUploadCancelled: 'Upload cancelled',
+    warnFileTooBig: '{name} is {size}, over the 8 GB upload limit — not uploaded',
+    warnAudioTooLong: '{name} is about {dur}, over the per-run limit of {limit}. Enable auto-split before uploading, or trim the audio',
+    warnBatchSkipped: '{n} file(s) not uploaded (see warnings)',
     toastCancelled: 'Cancel requested', toastCopied: 'Copied to clipboard',
     toastOpFail: 'Operation failed: {msg}', toastWaitJobs: 'Wait for running jobs to finish before switching devices',
     toastReloading: 'Reloading model…', toastSwitchFail: 'Switch failed: {msg}',
@@ -209,6 +215,38 @@ function fmtBytes(n) {
   if (n >= 1024 ** 2) return (n / 1024 ** 2).toFixed(1) + ' MB';
   if (n >= 1024) return (n / 1024).toFixed(0) + ' KB';
   return n + ' B';
+}
+
+// 浏览器读媒体时长（秒）：objectURL + 元数据，无需上传。
+// 读不出（wmv 等浏览器不支持的容器、损坏文件）或超时返回 null ——
+// 预检静默跳过，交给服务端 ffprobe 兜底，行为不劣于无预检
+function probeDurationSec(file) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const el = document.createElement('video');
+    el.preload = 'metadata';
+    const done = (sec) => {
+      URL.revokeObjectURL(url);
+      resolve(sec);
+    };
+    const timer = setTimeout(() => done(null), 5000);
+    el.onloadedmetadata = () => {
+      if (el.duration === Infinity || Number.isNaN(el.duration)) {
+        // DVR/流式录制的 webm 时长元数据在文件尾：跳到较大偏移逼浏览器重算
+        el.currentTime = 1e101;
+        el.ontimeupdate = () => {
+          el.ontimeupdate = null;
+          clearTimeout(timer);
+          done(Number.isFinite(el.duration) ? el.duration : null);
+        };
+      } else {
+        clearTimeout(timer);
+        done(el.duration);
+      }
+    };
+    el.onerror = () => { clearTimeout(timer); done(null); };
+    el.src = url;
+  });
 }
 
 // 毫秒 → m:ss / h:mm:ss
@@ -388,9 +426,36 @@ function updateStartBtn() {
 
 // ---- 上传 ----
 
-// files: File 数组（单个也走数组，统一状态）；null 等价清空
-function setFiles(files) {
-  selectedFiles = files ? [...files] : [];
+// files: File 数组（单个也走数组，统一状态）；null 等价清空。
+// 选中即预检：超 8GB 直接拒；时长超引擎上限且未开自动分段时提示
+// （时长读不出则跳过，服务端 ffprobe 兜底）
+async function setFiles(files) {
+  const picked = files ? [...files] : [];
+  const kept = [];
+  let rejected = 0;
+  const maxBytes = 8 * 1024 ** 3;
+  const limitMs = status?.limits?.effective_max_audio_ms || 0;
+  const chunkOn = ($('opt-chunk').value || '0') !== '0';
+
+  for (const f of picked) {
+    if (f.size > maxBytes) {
+      toast(t('warnFileTooBig', { name: f.name, size: fmtBytes(f.size) }), true);
+      rejected++;
+      continue;
+    }
+    if (limitMs && !chunkOn) {
+      const sec = await probeDurationSec(f);
+      if (sec != null && sec * 1000 > limitMs) {
+        toast(t('warnAudioTooLong', { name: f.name, dur: fmtMsZh(sec * 1000), limit: fmtMsZh(limitMs) }), true);
+        rejected++;
+        continue;
+      }
+    }
+    kept.push(f);
+  }
+  if (rejected > 1) toast(t('warnBatchSkipped', { n: rejected }), true);
+
+  selectedFiles = kept;
   const chip = $('file-chip');
   if (selectedFiles.length === 1) {
     chip.hidden = false;

@@ -28,7 +28,7 @@ logger = logging.getLogger("webui")
 
 # 默认模型：resources/model/ 下（gitignore，不入库）；可用 --model 指定其他路径
 DEFAULT_MODEL = str(Path(__file__).resolve().parent.parent / "resources" / "model" / "MOSS-Transcribe-Diarize-Q8_0.gguf")
-MAX_UPLOAD_BYTES = 2 * 1024**3
+MAX_UPLOAD_BYTES = 8 * 1024**3
 STATIC_DIR = Path(__file__).parent / "static"
 
 _NATIVE_LEVELS = {1: logging.INFO, 2: logging.WARNING, 3: logging.ERROR, 4: logging.DEBUG}
@@ -116,7 +116,7 @@ def create_app(model_path: str) -> FastAPI:
                 while chunk := await file.read(1024 * 1024):
                     size += len(chunk)
                     if size > MAX_UPLOAD_BYTES:
-                        raise HTTPException(413, "文件过大（上限 2 GB）")
+                        raise HTTPException(413, "文件过大（上限 8 GB）")
                     out.write(chunk)
             if size == 0:
                 raise HTTPException(400, "空文件")
