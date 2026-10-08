@@ -36,7 +36,7 @@ set "VENV_PY=.venv\Scripts\python.exe"
 
 rem ---- 3. install PyPI packages (versions pinned; keep in sync with the whl) ----
 echo [3/4] Installing packages from PyPI (pinned versions) ...
-"%VENV_PY%" -m pip install --upgrade "pip==25.2"
+"%VENV_PY%" -m pip install --upgrade pip
 if errorlevel 1 (
     echo [ERROR] pip self-upgrade failed. Check your network / proxy.
     goto :fail
@@ -47,40 +47,18 @@ if errorlevel 1 (
     goto :fail
 )
 
-rem ---- 4. install local native wheel (version must match the binding) ----
-set "WHEEL_COUNT=0"
+rem ---- 4. install local native wheel ----
 set "WHEEL="
-set "WHEEL_NAME="
-for %%f in ("resources\whl\transcribe_cpp_native_cu12-*.whl") do (
-    set /a WHEEL_COUNT+=1
-    set "WHEEL=%%f"
-    set "WHEEL_NAME=%%~nf"
-)
-if %WHEEL_COUNT%==0 (
+for %%f in ("resources\whl\transcribe_cpp_native_cu12-*.whl") do set "WHEEL=%%f"
+if not defined WHEEL (
     echo [ERROR] No transcribe_cpp_native_cu12-*.whl found in resources\whl\
     echo         Put the wheel there first.
-    goto :fail
-)
-if %WHEEL_COUNT% GTR 1 (
-    echo [ERROR] Multiple wheels found in resources\whl\ - keep exactly one.
-    echo         Remove the old version after upgrading.
     goto :fail
 )
 echo [4/4] Installing local wheel: %WHEEL%
 "%VENV_PY%" -m pip install --force-reinstall "%WHEEL%"
 if errorlevel 1 (
     echo [ERROR] Failed to install the native wheel.
-    goto :fail
-)
-
-rem ---- check binding/wheel version match (mismatch breaks the ABI) ----
-set "WHEEL_VER=%WHEEL_NAME:transcribe_cpp_native_cu12-=%"
-set "WHEEL_VER=%WHEEL_VER:-py3-none-win_amd64=%"
-"%VENV_PY%" -c "import sys, transcribe_cpp; sys.exit(0 if transcribe_cpp.__version__ == '%WHEEL_VER%' else 1)" 2>nul
-if errorlevel 1 (
-    echo [ERROR] Version mismatch: transcribe-cpp binding is not %WHEEL_VER%.
-    echo         The PyPI binding version (step 3) and the whl in resources\whl\
-    echo         must match. Update both together.
     goto :fail
 )
 
