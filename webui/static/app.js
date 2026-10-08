@@ -67,6 +67,7 @@ const I18N = {
     toastBatchDone: '{n} 个文件已加入队列', toastBatchSplit: '（切分后共 {n} 个任务）',
     toastBatchMixed: '{ok} 个成功，{fail} 个失败（{err}）',
     toastSubmitFail: '提交失败: {msg}', toastModelNotReady: '模型尚未就绪，请稍候',
+    toastUploadCancelled: '已取消上传',
     toastCancelled: '已请求取消', toastCopied: '已复制到剪贴板',
     toastOpFail: '操作失败: {msg}', toastWaitJobs: '请等待任务结束再切换设备',
     toastReloading: '开始重载模型…', toastSwitchFail: '切换失败: {msg}',
@@ -126,6 +127,7 @@ const I18N = {
     toastBatchDone: '{n} files queued', toastBatchSplit: ' ({n} jobs after splitting)',
     toastBatchMixed: '{ok} succeeded, {fail} failed ({err})',
     toastSubmitFail: 'Submit failed: {msg}', toastModelNotReady: 'Model not ready yet, please wait',
+    toastUploadCancelled: 'Upload cancelled',
     toastCancelled: 'Cancel requested', toastCopied: 'Copied to clipboard',
     toastOpFail: 'Operation failed: {msg}', toastWaitJobs: 'Wait for running jobs to finish before switching devices',
     toastReloading: 'Reloading model…', toastSwitchFail: 'Switch failed: {msg}',
@@ -175,6 +177,8 @@ let status = null;
 let jobs = [];
 let selectedFiles = [];  // 批量模式下可同时持有多个待上传文件
 let pollTimer = null;
+let activeXhr = null;      // 正在上传的 XHR（供文件条 ✕ 中途 abort）
+let uploadAborted = false; // ✕ 中止上传：批量模式下剩余文件也不再继续
 
 // ---- 基础工具 ----
 
@@ -413,6 +417,7 @@ function setFiles(files) {
 function uploadWithProgress(fd, onProgress, onUploaded) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    activeXhr = xhr;
     xhr.open('POST', '/api/jobs');
     xhr.responseType = 'json';
     xhr.upload.onprogress = (e) => {
@@ -422,6 +427,7 @@ function uploadWithProgress(fd, onProgress, onUploaded) {
     // 提示语从"上传中"切换过去，避免进度条停在 100% 干等
     if (onUploaded) xhr.upload.onload = () => onUploaded();
     xhr.onload = () => {
+      if (activeXhr === xhr) activeXhr = null;
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve(xhr.response);
       } else {
@@ -429,8 +435,14 @@ function uploadWithProgress(fd, onProgress, onUploaded) {
         reject(new Error(typeof d === 'string' ? d : (d ? JSON.stringify(d) : `${xhr.status} ${xhr.statusText}`)));
       }
     };
-    xhr.onerror = () => reject(new Error('网络错误'));
-    xhr.onabort = () => reject(new Error('已取消'));
+    xhr.onerror = () => {
+      if (activeXhr === xhr) activeXhr = null;
+      reject(new Error('网络错误'));
+    };
+    xhr.onabort = () => {
+      if (activeXhr === xhr) activeXhr = null;
+      reject(new Error('已取消'));
+    };
     xhr.send(fd);
   });
 }
@@ -458,9 +470,11 @@ async function startTranscribe() {
   const label = $('upload-label');
   btn.disabled = true;
   bar.hidden = false;
+  uploadAborted = false;
 
   let okCount = 0, failCount = 0, jobTotal = 0, lastErr = null;
   for (let i = 0; i < files.length; i++) {
+    if (uploadAborted) break; // ✕ 已中止：剩余文件不再上传
     const nth = multi ? `(${i + 1}/${files.length})` : '';
     btn.textContent = t('btnUploading' + (multi ? 'N' : ''), { nth });
     const paint = (pct) => {
@@ -482,13 +496,16 @@ async function startTranscribe() {
       okCount++;
       jobTotal += r.count || 1;
     } catch (e) {
+      if (uploadAborted) break; // 中止引发的 reject：不算失败统计，直接退出
       failCount++; // 单个失败不中断，继续传后续文件
       lastErr = e;
     }
   }
 
   setFiles(null);
-  if (!failCount) {
+  if (uploadAborted) {
+    toast(t('toastUploadCancelled'));
+  } else if (!failCount) {
     if (multi) toast(t('toastBatchDone', { n: okCount }) + (jobTotal > okCount ? t('toastBatchSplit', { n: jobTotal }) : ''));
     else toast(jobTotal > 1 ? t('toastSplit', { n: jobTotal }) : t('toastQueued'));
   } else if (!okCount) {
@@ -938,7 +955,15 @@ $('file-input').addEventListener('change', (e) => {
   if (!list.length) return setFiles(null);
   setFiles(batchInput.checked ? list : [list[0]]);
 });
-$('file-clear').addEventListener('click', () => setFiles(null));
+// ✕：上传中先中止在途 XHR（批量模式剩余文件也随之停止），
+// 随后 setFiles(null) 清空选择
+$('file-clear').addEventListener('click', () => {
+  if (activeXhr) {
+    uploadAborted = true;
+    activeXhr.abort();
+  }
+  setFiles(null);
+});
 $('start-btn').addEventListener('click', startTranscribe);
 $('reload-btn').addEventListener('click', switchDevice);
 
