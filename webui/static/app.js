@@ -69,7 +69,7 @@ const I18N = {
     toastBatchMixed: '{ok} 个成功，{fail} 个失败（{err}）',
     toastSubmitFail: '提交失败: {msg}', toastModelNotReady: '模型尚未就绪，请稍候',
     toastUploadCancelled: '已取消上传',
-    warnFileTooBig: '文件 {name} 大小 {size}，超过上传上限 32 GB，未上传',
+    warnFileTooBig: '文件 {name} 大小 {size}，超过上传上限 {limit}，未上传',
     warnAudioTooLong: '文件 {name} 时长约 {dur}，超过单次处理上限 {limit}。可开启「长音频自动分段」后再上传，或裁剪音频',
     warnBatchSkipped: '{n} 个文件未上传：',
     toastCancelled: '已请求取消', toastCopied: '已复制到剪贴板',
@@ -133,7 +133,7 @@ const I18N = {
     toastBatchMixed: '{ok} succeeded, {fail} failed ({err})',
     toastSubmitFail: 'Submit failed: {msg}', toastModelNotReady: 'Model not ready yet, please wait',
     toastUploadCancelled: 'Upload cancelled',
-    warnFileTooBig: '{name} is {size}, over the 32 GB upload limit — not uploaded',
+    warnFileTooBig: '{name} is {size}, over the {limit} upload limit — not uploaded',
     warnAudioTooLong: '{name} is about {dur}, over the per-run limit of {limit}. Enable auto-split before uploading, or trim the audio',
     warnBatchSkipped: '{n} file(s) not uploaded:',
     toastCancelled: 'Cancel requested', toastCopied: 'Copied to clipboard',
@@ -267,8 +267,9 @@ function fmtClockMs(ms, showMs = true) {
 }
 
 function fmtSec(sec) {
-  if (sec < 60) return t('secOnly', { v: sec.toFixed(0) });
-  return t('minSec', { m: Math.floor(sec / 60), s: Math.round(sec % 60) });
+  const total = Math.round(sec); // 先取整总数，避免 59.5s 进位时出现「60 秒」
+  if (total < 60) return t('secOnly', { v: total });
+  return t('minSec', { m: Math.floor(total / 60), s: total % 60 });
 }
 
 function fmtMsZh(ms) {
@@ -315,8 +316,14 @@ function saveAliases(jobId, map) {
 }
 
 // ---- 轮询 ----
+// 单链保证：pollNow 在 poll 在飞期间调用时不另起新链（否则两条链各自
+// 排 timer，请求数只增不减），改为记 pending，在飞轮结束后立即补一轮
+let pollInFlight = false;
+let pollPending = false;
 
 async function poll() {
+  if (pollInFlight) { pollPending = true; return; }
+  pollInFlight = true;
   try {
     const [st, jr] = await Promise.all([
       api('/api/status'),
@@ -328,10 +335,17 @@ async function poll() {
     renderJobs();
   } catch (e) {
     console.error('轮询失败:', e);
+  } finally {
+    pollInFlight = false;
+    if (pollPending) {
+      pollPending = false;
+      poll(); // 立即补一轮，不经过 pollTimer（不产生第二 timer）
+      return;
+    }
+    const busy = (status?.model?.state !== 'ready')
+      || jobs.some((j) => ['queued', 'converting', 'running'].includes(j.status));
+    pollTimer = setTimeout(poll, busy ? 1000 : 2000);
   }
-  const busy = (status?.model?.state !== 'ready')
-    || jobs.some((j) => ['queued', 'converting', 'running'].includes(j.status));
-  pollTimer = setTimeout(poll, busy ? 1000 : 2000);
 }
 
 function pollNow() {
@@ -438,13 +452,14 @@ async function setFiles(files) {
   const picked = files ? [...files] : [];
   const kept = [];
   const reasons = []; // 逐文件的拒绝原因，最后合并成一条提示（toast 单例，逐条弹会被互相覆盖）
-  const maxBytes = 32 * 1024 ** 3;
+  // 上限以 /api/status 下发为准（status 未就绪时回落，服务端仍会硬校验）
+  const maxBytes = status?.max_upload_bytes || 32 * 1024 ** 3;
   const limitMs = status?.limits?.effective_max_audio_ms || 0;
   const chunkOn = ($('opt-chunk').value || '0') !== '0';
 
   for (const f of picked) {
     if (f.size > maxBytes) {
-      reasons.push(t('warnFileTooBig', { name: f.name, size: fmtBytes(f.size) }));
+      reasons.push(t('warnFileTooBig', { name: f.name, size: fmtBytes(f.size), limit: fmtBytes(maxBytes) }));
       continue;
     }
     if (limitMs && !chunkOn) {
@@ -850,6 +865,13 @@ function renderJobs() {
   }
   for (const [id, entry] of jobEls) {
     if (!seen.has(id)) {
+      // 被移出 DOM 的 <audio> 会继续出声且无处可停（幽灵音频）：
+      // 删卡前先停掉卡内正在播放的音频并释放全局引用
+      const audio = entry.el.querySelector('.job-audio');
+      if (audio && !audio.paused) {
+        audio.pause();
+        if (activeAudio === audio) activeAudio = null;
+      }
       entry.el.remove();
       jobEls.delete(id);
     }

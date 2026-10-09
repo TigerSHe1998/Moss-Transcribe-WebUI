@@ -115,6 +115,9 @@ def http_json(method: str, url: str, payload=None, timeout: float = HTTP_TIMEOUT
         raise ServiceError(f"cannot reach service: {e.reason}") from None
     except (TimeoutError, socket.timeout, ValueError) as e:
         raise ServiceError(f"service communication failed: {e}") from None
+    except OSError as e:
+        # urllib 路径也可能直接抛裸 ConnectionResetError 等（服务中途被杀）
+        raise ServiceError(f"service communication failed: {e}") from None
 
 
 class Client:
@@ -168,6 +171,12 @@ class Client:
                 conn.send(tail)
             except OSError:
                 pass  # 服务器可能提前拒绝并断开（如超限），仍尝试读响应
+            # 等待响应期间服务端要同步完成 ffprobe + （--autosplit 时）
+            # 整段切分，长音频可达分钟级——收响应不能受 HTTP_TIMEOUT 限制，
+            # 否则任务已创建却被误判失败（自启服务还会被终止）
+            conn.timeout = None
+            if conn.sock is not None:
+                conn.sock.settimeout(None)
             resp = conn.getresponse()
             body = resp.read().decode("utf-8", "replace")
             if resp.status != 200:
@@ -607,6 +616,9 @@ def run(args, files) -> int:
             except Exception:
                 pass
         code = 130
+    except ServiceError as e:
+        # 运行中途服务失联：退出码契约 2 = 服务错误（而非裸 traceback 的 1）
+        die(EXIT_SERVICE, str(e))
     finally:
         if SERVICE["self_started"]:
             stop_service()

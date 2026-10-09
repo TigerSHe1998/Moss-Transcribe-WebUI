@@ -77,6 +77,7 @@ def create_app(model_path: str) -> FastAPI:
     def status() -> dict:
         out = engine.status()
         out["webui_version"] = __version__
+        out["max_upload_bytes"] = MAX_UPLOAD_BYTES  # 前端预检与提示文案的唯一来源
         return out
 
     @app.post("/api/model")

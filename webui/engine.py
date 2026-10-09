@@ -507,7 +507,12 @@ class Engine:
             job_id = self._queue.get()
             with self._jobs_lock:
                 job = self._jobs.get(job_id)
-            if job is None or job.status == "cancelled":
+            if job is None:
+                continue
+            if job.status == "cancelled":
+                # 排队中被取消：终态同样不再需要原始上传文件
+                # （cancel() 只改状态不删文件，清理落在这里）
+                self._drop_stored(job)
                 continue
             try:
                 self._process(job)
@@ -516,6 +521,9 @@ class Engine:
                 job.status = "error"
                 job.error = f"{type(e).__name__}: {e}"
                 job.finished = time.time()
+                # _process 内层 try 之外的失败（如 _session_for 对非法参数
+                # 抛错）：同样要清理原始上传文件
+                self._drop_stored(job)
 
     def _session_for(self, job: Job) -> "tc.Session":
         model = self._model
