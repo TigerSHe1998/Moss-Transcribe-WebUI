@@ -28,7 +28,7 @@ import transcribe_cpp as tc
 log = logging.getLogger("webui.engine")
 
 SAMPLE_RATE = 16000
-HISTORY_LIMIT = 30  # 内存中保留的已完成任务数
+HISTORY_LIMIT = 100  # 内存中保留的已完成任务数
 
 VALID_BACKENDS = {"auto", "cpu", "metal", "vulkan", "cpu_accel", "cuda", "rocm"}
 TIMESTAMP_CHOICES = ("none", "auto", "segment")
@@ -478,6 +478,27 @@ class Engine:
                 return False, "任务进行中，请先取消"
             self._drop_locked(job_id)
         return True, ""
+
+    def retry_job(self, job_id: str) -> tuple[Optional[Job], str]:
+        """用回听音频重新转录：复制 uploads/{id}.wav 为新任务的输入
+        （复制的文件走完整的转码/推理管线，且新任务转码后会删它——
+        必须复制，不能直接引用原任务的回听文件）。沿用原任务参数。"""
+        with self._jobs_lock:
+            job = self._jobs.get(job_id)
+            if job is None:
+                return None, "任务不存在"
+            if job.status in ("queued", "converting", "running"):
+                return None, "任务进行中，无法重试"
+        if not job.audio_path or not Path(job.audio_path).is_file():
+            return None, "回听音频不存在（已清理或任务无音频）"
+        retry_path = self.upload_dir / f"{uuid.uuid4().hex}.wav"
+        try:
+            shutil.copyfile(job.audio_path, retry_path)
+        except OSError as e:
+            return None, f"复制回听音频失败: {e}"
+        # 原任务参数原样重跑；chunk_min 保留（回听 WAV 已是单段时长）
+        new_job = self.submit(retry_path, job.filename, dict(job.params))
+        return new_job, ""
 
     # ---- worker ----
 

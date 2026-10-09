@@ -188,6 +188,14 @@ def create_app(model_path: str) -> FastAPI:
             raise HTTPException(400, msg)
         return {"ok": True}
 
+    # 用回听音频重新转录（不重传文件）；沿用原任务参数
+    @app.post("/api/jobs/{job_id}/retry")
+    def retry_job(job_id: str) -> dict:
+        job, msg = engine.retry_job(job_id)
+        if job is None:
+            raise HTTPException(400, msg)
+        return {"job_id": job.id}
+
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     return app
 

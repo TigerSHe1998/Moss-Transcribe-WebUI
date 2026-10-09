@@ -47,7 +47,7 @@ const I18N = {
     infoJobs: '当前任务: {n} 个进行中',
     stQueued: '排队中', stConverting: '转码中', stRunning: '转录中', stDone: '已完成',
     stError: '失败', stCancelled: '已取消', queuedPos: '排队中 (第 {n} 位)',
-    btnCancel: '取消', btnDelete: '删除',
+    btnCancel: '取消', btnDelete: '删除', btnRetry: '重试', toastRetryQueued: '已重新提交转录任务（免重传）', toastRetryFail: '重试失败: {msg}',
     metaDuration: '时长 {dur}', metaElapsedPrefix: '已用时', metaTook: '耗时 {dur}',
     diarizeOn: '说话人分离', diarizeOff: '无分离',
     detailPartial: '含部分结果', detailTruncated: '输出被截断，仅部分结果',
@@ -111,7 +111,7 @@ const I18N = {
     infoJobs: 'Active jobs: {n}',
     stQueued: 'Queued', stConverting: 'Converting', stRunning: 'Transcribing', stDone: 'Done',
     stError: 'Failed', stCancelled: 'Cancelled', queuedPos: 'Queued (#{n})',
-    btnCancel: 'Cancel', btnDelete: 'Delete',
+    btnCancel: 'Cancel', btnDelete: 'Delete', btnRetry: 'Retry', toastRetryQueued: 'Job resubmitted (no re-upload needed)', toastRetryFail: 'Retry failed: {msg}',
     metaDuration: 'Duration {dur}', metaElapsedPrefix: 'Elapsed', metaTook: 'Took {dur}',
     diarizeOn: 'Diarization', diarizeOff: 'No diarization',
     detailPartial: 'with partial result', detailTruncated: 'output truncated, partial result only',
@@ -878,7 +878,11 @@ function jobCard(j, msPrecision = false) {
 
   let actions = '';
   if (active) actions = `<button class="btn mini danger" data-action="cancel">${esc(t('btnCancel'))}</button>`;
-  else actions = `<button class="btn mini" data-action="delete">${esc(t('btnDelete'))}</button>`;
+  else {
+    // 终态卡片：删除 + （有回听音频时）重试——用回听 WAV 重新转录，免重传
+    actions = `<button class="btn mini" data-action="delete">${esc(t('btnDelete'))}</button>`
+      + (j.has_audio ? `<button class="btn mini" data-action="retry">${esc(t('btnRetry'))}</button>` : '');
+  }
 
   return `
   <div class="card job" data-id="${j.id}">
@@ -1071,6 +1075,14 @@ $('jobs').addEventListener('click', async (e) => {
       case 'delete':
         await api(`/api/jobs/${id}/delete`, { method: 'POST' });
         try { localStorage.removeItem(`spk-${id}`); } catch { /* 存储被禁 */ }
+        break;
+      case 'retry':
+        try {
+          await api(`/api/jobs/${id}/retry`, { method: 'POST' });
+          toast(t('toastRetryQueued'));
+        } catch (e) {
+          toast(t('toastRetryFail', { msg: e.message }), true);
+        }
         break;
       case 'copy':
         await navigator.clipboard.writeText(fullText(job, btn.closest('.result')?.querySelector('.ms-toggle input')?.checked));
