@@ -29,6 +29,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 PROG = "transcribe"
+VERSION = "0.3.2"   # keep in sync with webui/server.py __version__
 
 MEDIA_EXTS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".opus", ".aac",
               ".wma", ".mp4", ".mkv", ".webm", ".mov", ".avi"}
@@ -506,10 +507,12 @@ class _Parser(argparse.ArgumentParser):
 
 def parse_args(argv):
     p = _Parser(prog=PROG,
-                description="One-shot transcription CLI via Moss Transcribe WebUI. "
-                            "Attaches to a running WebUI service or starts a local "
-                            "one if needed.",
+                description=f"transcribe {VERSION} — one-shot transcription CLI via Moss "
+                            "Transcribe WebUI. Attaches to a running WebUI service "
+                            "or starts a local one if needed.",
                 epilog=EXAMPLES, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("-v", "--version", action="version", version=f"{PROG} {VERSION}",
+                   help="show the CLI version and exit")
     p.add_argument("path", nargs="?", help="audio/video file to transcribe")
     p.add_argument("-b", "--batch", metavar="FOLDER",
                    help="transcribe all media files in FOLDER (top level only)")

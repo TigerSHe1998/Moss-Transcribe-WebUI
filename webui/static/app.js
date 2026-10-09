@@ -33,6 +33,7 @@ const I18N = {
     lblCtx: '上下文长度 n_ctx（0 = 默认）',
     noteCtx: 'n_ctx 默认 131072，调小会降低单次音频的时长上限；线程数仅在 CPU 后端生效。',
     h2Info: '运行信息', h2Decl: '声明',
+    infoWebuiVersion: 'WebUI版本: {v}',
     declBody: '本项目为<strong>完全免费</strong>的 Apache 2.0 协议开源项目，数据不上云，所有计算均在本地进行。唯一发布地址 <a href="https://github.com/TigerSHe1998/Moss-Transcribe-WebUI" target="_blank" rel="noopener">TigerSHe1998/Moss-Transcribe-WebUI</a>，若您从任何渠道付费获取此软件，请立刻申请退款。',
     h2Upload: '上传媒体', lblBatch: '批量模式', titleBatch: '支持文件多选上传', removeFile: '移除',
     dzTitle: '拖拽文件到此处，或点击选择',
@@ -96,13 +97,14 @@ const I18N = {
     lblCtx: 'Context length n_ctx (0 = default)',
     noteCtx: 'n_ctx defaults to 131072; lowering it reduces the max audio length per run. Threads apply to the CPU backend only.',
     h2Info: 'Runtime Info', h2Decl: 'Notice',
+    infoWebuiVersion: 'WebUI version: {v}',
     declBody: 'This project is <strong>completely free</strong> and open-source under the Apache 2.0 license. No data is uploaded to the cloud — all computation runs locally. The only official release is <a href="https://github.com/TigerSHe1998/Moss-Transcribe-WebUI" target="_blank" rel="noopener">TigerSHe1998/Moss-Transcribe-WebUI</a>. If you obtained this software through any paid channel, please request a refund immediately.',
     h2Upload: 'Upload Media', lblBatch: 'Batch mode', titleBatch: 'Select multiple files at once', removeFile: 'Remove',
     dzTitle: 'Drag files here, or click to select',
     dzHint: 'Audio/video files supported; auto-converted to 16kHz mono',
     btnStart: 'Start transcription',
     infoModel: 'Model: {variant} ({arch})', infoModelFile: 'Model file: {path} ({size})',
-    infoVersion: 'Backend: transcribe_cpp {v} / native {n}', sizeUnknown: 'unknown size',
+    infoVersion: 'Backend version: transcribe_cpp {v} / native {n}', sizeUnknown: 'unknown size',
     infoLimit: 'Max audio per run: ~{dur} (engine limit; actual capacity depends on available VRAM / RAM)',
     infoFfmpegOn: 'ffmpeg: active ({src})',
     infoFfmpegOff: 'ffmpeg: unavailable (16kHz mono WAV only; put binaries in resources/ffmpeg/)',
@@ -408,6 +410,7 @@ function renderStatus() {
   if (m.path) {
     info.push(t('infoModelFile', { path: m.path, size: m.size_bytes ? fmtBytes(m.size_bytes) : t('sizeUnknown') }));
   }
+  info.push(t('infoWebuiVersion', { v: status.webui_version || '-' }));
   info.push(t('infoVersion', { v: status.version, n: status.native_version }));
   if (limits) info.push(t('infoLimit', { dur: fmtMsZh(limits.effective_max_audio_ms) }));
   if (status.ffmpeg) {
