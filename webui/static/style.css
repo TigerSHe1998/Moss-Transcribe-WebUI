@@ -223,9 +223,12 @@ details[open] summary { margin-bottom: 10px; }
   inset: 0 auto 0 0;
   width: 0;
   background: var(--green);
-  border-radius: 999px;
-  transition: width .15s ease;
+  /* 中途：右缘垂直截断（容器 overflow 由圆角轨道裁剪左端）；
+     接近传完时（app.js 加 .done）右缘变回圆角，与轨道贴合 */
+  border-radius: 999px 0 0 999px;
+  transition: width .15s ease, border-radius .15s ease;
 }
+.upload-fill.done { border-radius: 999px; }
 .upload-label {
   position: absolute;
   inset: 0;

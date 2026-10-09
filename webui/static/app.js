@@ -68,7 +68,7 @@ const I18N = {
     toastBatchMixed: '{ok} 个成功，{fail} 个失败（{err}）',
     toastSubmitFail: '提交失败: {msg}', toastModelNotReady: '模型尚未就绪，请稍候',
     toastUploadCancelled: '已取消上传',
-    warnFileTooBig: '文件 {name} 大小 {size}，超过上传上限 8 GB，未上传',
+    warnFileTooBig: '文件 {name} 大小 {size}，超过上传上限 32 GB，未上传',
     warnAudioTooLong: '文件 {name} 时长约 {dur}，超过单次处理上限 {limit}。可开启「长音频自动分段」后再上传，或裁剪音频',
     warnBatchSkipped: '{n} 个文件未上传：',
     toastCancelled: '已请求取消', toastCopied: '已复制到剪贴板',
@@ -131,7 +131,7 @@ const I18N = {
     toastBatchMixed: '{ok} succeeded, {fail} failed ({err})',
     toastSubmitFail: 'Submit failed: {msg}', toastModelNotReady: 'Model not ready yet, please wait',
     toastUploadCancelled: 'Upload cancelled',
-    warnFileTooBig: '{name} is {size}, over the 8 GB upload limit — not uploaded',
+    warnFileTooBig: '{name} is {size}, over the 32 GB upload limit — not uploaded',
     warnAudioTooLong: '{name} is about {dur}, over the per-run limit of {limit}. Enable auto-split before uploading, or trim the audio',
     warnBatchSkipped: '{n} file(s) not uploaded:',
     toastCancelled: 'Cancel requested', toastCopied: 'Copied to clipboard',
@@ -429,13 +429,13 @@ function updateStartBtn() {
 // ---- 上传 ----
 
 // files: File 数组（单个也走数组，统一状态）；null 等价清空。
-// 选中即预检：超 8GB 直接拒；时长超引擎上限且未开自动分段时提示
+// 选中即预检：超 32GB 直接拒；时长超引擎上限且未开自动分段时提示
 // （时长读不出则跳过，服务端 ffprobe 兜底）
 async function setFiles(files) {
   const picked = files ? [...files] : [];
   const kept = [];
   const reasons = []; // 逐文件的拒绝原因，最后合并成一条提示（toast 单例，逐条弹会被互相覆盖）
-  const maxBytes = 8 * 1024 ** 3;
+  const maxBytes = 32 * 1024 ** 3;
   const limitMs = status?.limits?.effective_max_audio_ms || 0;
   const chunkOn = ($('opt-chunk').value || '0') !== '0';
 
@@ -549,6 +549,8 @@ async function startTranscribe() {
     btn.textContent = t('btnUploading' + (multi ? 'N' : ''), { nth });
     const paint = (pct) => {
       fill.style.width = (pct * 100).toFixed(1) + '%';
+      // 接近传完时右缘变圆角与轨道贴合（中途保持直角截断）
+      fill.classList.toggle('done', pct >= 0.995);
       label.textContent = t('uploading' + (multi ? 'N' : ''), { nth, p: (pct * 100).toFixed(0) });
     };
     paint(0);

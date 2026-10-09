@@ -32,7 +32,7 @@ PROG = "transcribe"
 
 MEDIA_EXTS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".opus", ".aac",
               ".wma", ".mp4", ".mkv", ".webm", ".mov", ".avi"}
-MAX_UPLOAD_BYTES = 8 * 1024 ** 3   # server-side hard limit
+MAX_UPLOAD_BYTES = 32 * 1024 ** 3   # server-side hard limit
 
 PROBE_TIMEOUT = 2      # service detection
 HTTP_TIMEOUT = 60      # per socket operation
