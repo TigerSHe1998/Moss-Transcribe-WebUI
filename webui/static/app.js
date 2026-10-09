@@ -70,7 +70,7 @@ const I18N = {
     toastUploadCancelled: '已取消上传',
     warnFileTooBig: '文件 {name} 大小 {size}，超过上传上限 8 GB，未上传',
     warnAudioTooLong: '文件 {name} 时长约 {dur}，超过单次处理上限 {limit}。可开启「长音频自动分段」后再上传，或裁剪音频',
-    warnBatchSkipped: '{n} 个文件未上传（见提示）',
+    warnBatchSkipped: '{n} 个文件未上传：',
     toastCancelled: '已请求取消', toastCopied: '已复制到剪贴板',
     toastOpFail: '操作失败: {msg}', toastWaitJobs: '请等待任务结束再切换设备',
     toastReloading: '开始重载模型…', toastSwitchFail: '切换失败: {msg}',
@@ -133,7 +133,7 @@ const I18N = {
     toastUploadCancelled: 'Upload cancelled',
     warnFileTooBig: '{name} is {size}, over the 8 GB upload limit — not uploaded',
     warnAudioTooLong: '{name} is about {dur}, over the per-run limit of {limit}. Enable auto-split before uploading, or trim the audio',
-    warnBatchSkipped: '{n} file(s) not uploaded (see warnings)',
+    warnBatchSkipped: '{n} file(s) not uploaded:',
     toastCancelled: 'Cancel requested', toastCopied: 'Copied to clipboard',
     toastOpFail: 'Operation failed: {msg}', toastWaitJobs: 'Wait for running jobs to finish before switching devices',
     toastReloading: 'Reloading model…', toastSwitchFail: 'Switch failed: {msg}',
@@ -185,6 +185,8 @@ let selectedFiles = [];  // 批量模式下可同时持有多个待上传文件
 let pollTimer = null;
 let activeXhr = null;      // 正在上传的 XHR（供文件条 ✕ 中途 abort）
 let uploadAborted = false; // ✕ 中止上传：批量模式下剩余文件也不再继续
+let uploading = false;     // 上传/服务端处理中：禁用开始按钮并阻止重复提交
+                          // （轮询的 updateStartBtn 只看文件与模型状态，必须感知此标志）
 
 // ---- 基础工具 ----
 
@@ -201,13 +203,13 @@ async function api(path, options) {
   return res.json();
 }
 
-function toast(message, isError = false) {
+function toast(message, isError = false, ms = 4000) {
   const el = $('toast');
   el.textContent = message;
   el.classList.toggle('error', isError);
   el.hidden = false;
   clearTimeout(el._timer);
-  el._timer = setTimeout(() => { el.hidden = true; }, 4000);
+  el._timer = setTimeout(() => { el.hidden = true; }, ms);
 }
 
 function fmtBytes(n) {
@@ -421,7 +423,7 @@ function renderStatus() {
 }
 
 function updateStartBtn() {
-  $('start-btn').disabled = !selectedFiles.length || status?.model?.state !== 'ready';
+  $('start-btn').disabled = uploading || !selectedFiles.length || status?.model?.state !== 'ready';
 }
 
 // ---- 上传 ----
@@ -432,28 +434,29 @@ function updateStartBtn() {
 async function setFiles(files) {
   const picked = files ? [...files] : [];
   const kept = [];
-  let rejected = 0;
+  const reasons = []; // 逐文件的拒绝原因，最后合并成一条提示（toast 单例，逐条弹会被互相覆盖）
   const maxBytes = 8 * 1024 ** 3;
   const limitMs = status?.limits?.effective_max_audio_ms || 0;
   const chunkOn = ($('opt-chunk').value || '0') !== '0';
 
   for (const f of picked) {
     if (f.size > maxBytes) {
-      toast(t('warnFileTooBig', { name: f.name, size: fmtBytes(f.size) }), true);
-      rejected++;
+      reasons.push(t('warnFileTooBig', { name: f.name, size: fmtBytes(f.size) }));
       continue;
     }
     if (limitMs && !chunkOn) {
       const sec = await probeDurationSec(f);
       if (sec != null && sec * 1000 > limitMs) {
-        toast(t('warnAudioTooLong', { name: f.name, dur: fmtMsZh(sec * 1000), limit: fmtMsZh(limitMs) }), true);
-        rejected++;
+        reasons.push(t('warnAudioTooLong', { name: f.name, dur: fmtMsZh(sec * 1000), limit: fmtMsZh(limitMs) }));
         continue;
       }
     }
     kept.push(f);
   }
-  if (rejected > 1) toast(t('warnBatchSkipped', { n: rejected }), true);
+  if (reasons.length) {
+    const text = (reasons.length > 1 ? t('warnBatchSkipped', { n: reasons.length }) + '\n' : '') + reasons.join('\n');
+    toast(text, true, 4000 + reasons.length * 2500); // 多行内容按行数延长停留，读得完
+  }
 
   selectedFiles = kept;
   const chip = $('file-chip');
@@ -513,6 +516,7 @@ function uploadWithProgress(fd, onProgress, onUploaded) {
 }
 
 async function startTranscribe() {
+  if (uploading) return; // 上传/处理中重复点击直接忽略
   if (!selectedFiles.length) return;
   if (status?.model?.state !== 'ready') {
     toast(t('toastModelNotReady'), true);
@@ -536,6 +540,7 @@ async function startTranscribe() {
   btn.disabled = true;
   bar.hidden = false;
   uploadAborted = false;
+  uploading = true;
 
   let okCount = 0, failCount = 0, jobTotal = 0, lastErr = null;
   for (let i = 0; i < files.length; i++) {
@@ -581,6 +586,7 @@ async function startTranscribe() {
   bar.hidden = true;
   fill.style.width = '0';
   btn.textContent = t('btnStart');
+  uploading = false;
   updateStartBtn();
   pollNow();
 }

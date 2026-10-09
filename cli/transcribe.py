@@ -454,7 +454,7 @@ def wait_jobs(client: Client, job_ids: list, label: str) -> list:
 def transcribe_file(client: Client, path: Path, args, kinds: list, label: str) -> bool:
     t0 = time.time()
     if path.stat().st_size > MAX_UPLOAD_BYTES:
-        print(f"{label}: failed: file exceeds the 2 GB upload limit", file=sys.stderr)
+        print(f"{label}: failed: file exceeds the {MAX_UPLOAD_BYTES // 1024**3} GB upload limit", file=sys.stderr)
         return False
     print(f"{label}: uploading...")
     try:
