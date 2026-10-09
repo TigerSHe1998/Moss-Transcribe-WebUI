@@ -614,8 +614,18 @@ class Engine:
                 if partial is None:
                     raise
                 job.result = serialize_result(partial)
-                job.status = "done"
-                job.detail = "输出被截断，仅部分结果"
+                # 两种触发要区分：音频接近引擎时长上限（输出写满上下文）是真截断，
+                # 保留"部分结果"语义；音频远短于上限则是模型解码退化（如单 token
+                # 重复循环被 native 中止），明确标失败并透出原生原因，由用户决定
+                # 是否重试（重试按钮可用——回听音频已落盘）
+                near_limit = job_limit is not None and audio_ms >= job_limit * 0.9
+                if near_limit:
+                    job.status = "done"
+                    job.detail = "输出被截断，仅部分结果"
+                else:
+                    job.status = "error"
+                    job.detail = "输出被截断，仅部分结果"
+                    job.error = f"{e}"
             finally:
                 self._active_session = None
                 session.close()
