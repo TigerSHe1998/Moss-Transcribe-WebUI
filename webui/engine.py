@@ -377,9 +377,21 @@ class Engine:
                     stored_path.unlink(missing_ok=True)
                     if len(segs) == 1:  # 时长估算偏大，实际没超窗口
                         return [self.submit(segs[0], filename, params)]
+                    # 逐段精确时长（ffprobe），累加得每段在全片中的起点。
+                    # 切分点会落在包边界上（段长可略超窗口），用真实时长
+                    # 而非标称窗口累加，时间戳修正才零漂移
+                    offsets = [0]
+                    for s in segs[:-1]:
+                        dur = probe_duration_ms(s)
+                        offsets.append(offsets[-1] + (dur or chunk_min * 60 * 1000))
                     n = len(segs)
-                    return [self.submit(s, f"{filename} · 第{i}/{n}段", params)
-                            for i, s in enumerate(segs, 1)]
+                    jobs = []
+                    for i, (s, off) in enumerate(zip(segs, offsets), 1):
+                        p = dict(params)
+                        if i > 1:
+                            p["seg_offset_ms"] = off
+                        jobs.append(self.submit(s, f"{filename} · 第{i}/{n}段", p))
+                    return jobs
         return [self.submit(stored_path, filename, params)]
 
     def _split_audio(self, src: Path, chunk_min: int) -> list[Path]:

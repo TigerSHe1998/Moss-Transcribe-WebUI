@@ -371,12 +371,14 @@ def txt_content(job: dict) -> str:
     params = job.get("params") or {}
     with_diarize = params.get("diarize") == "on"
     no_ts = params.get("timestamps") == "none"
+    # 自动分段：展示时间加段起点偏移（全片绝对时间）；JSON 导出保持相对值
+    off = params.get("seg_offset_ms") or 0
     smap = speaker_map(r)
     if not segs:
         return (r.get("text") or "") + "\n"
     lines = []
     for s in segs:
-        time = "" if no_ts else f"[{fmt_clock(s['t0_ms'])} → {fmt_clock(s['t1_ms'])}] "
+        time = "" if no_ts else f"[{fmt_clock(s['t0_ms'] + off)} → {fmt_clock(s['t1_ms'] + off)}] "
         sp = f"Speaker {smap[s['speaker_id']]}: " if with_diarize else ""
         lines.append(time + sp + (s.get("text") or ""))
     return "\n".join(lines) + "\n"
@@ -386,11 +388,12 @@ def srt_content(job: dict) -> str:
     r = job.get("result") or {}
     segs = r.get("segments") or []
     with_diarize = (job.get("params") or {}).get("diarize") == "on"
+    off = (job.get("params") or {}).get("seg_offset_ms") or 0
     smap = speaker_map(r)
     blocks = []
     for i, s in enumerate(segs, 1):
         sp = f"Speaker {smap[s['speaker_id']]}: " if with_diarize else ""
-        blocks.append(f"{i}\n{srt_time(s['t0_ms'])} --> {srt_time(s['t1_ms'])}\n"
+        blocks.append(f"{i}\n{srt_time(s['t0_ms'] + off)} --> {srt_time(s['t1_ms'] + off)}\n"
                       f"{sp}{s.get('text') or ''}\n")
     return "\n".join(blocks)
 

@@ -773,18 +773,20 @@ function wirePlayer(card, j) {
   });
 
   // 毫秒开关：只改写时间文本（DOM 不动，播放/滚动/高亮天然保持）。
-  // 原始毫秒值在渲染时存于 data-t0/t1，置信度存于 data-p
+  // 原始毫秒值在渲染时存于 data-t0/t1，置信度存于 data-p；
+  // 显示加分段偏移（data-t0/t1 存相对值供播放器用）
   const msToggle = card.querySelector('.ms-toggle');
   if (msToggle) {
+    const off = j.params.seg_offset_ms || 0;
     msToggle.addEventListener('change', () => {
       const on = msToggle.querySelector('input[type="checkbox"]').checked;
       msToggle.classList.toggle('on', on);
       card.querySelectorAll('.seg-time').forEach((el) => {
-        el.textContent = `${fmtClockMs(+el.dataset.t0, on)} → ${fmtClockMs(+el.dataset.t1, on)}`;
+        el.textContent = `${fmtClockMs(+el.dataset.t0 + off, on)} → ${fmtClockMs(+el.dataset.t1 + off, on)}`;
       });
       card.querySelectorAll('.tl-bar').forEach((el) => {
         const conf = el.dataset.p != null ? `（置信度 ${(el.dataset.p * 100).toFixed(0)}%）` : '';
-        el.title = `${fmtClockMs(+el.dataset.t0, on)} – ${fmtClockMs(+el.dataset.t1, on)}${conf}`;
+        el.title = `${fmtClockMs(+el.dataset.t0 + off, on)} – ${fmtClockMs(+el.dataset.t1 + off, on)}${conf}`;
       });
     });
   }
@@ -929,6 +931,9 @@ function resultBlock(j, cardMs = false) {
   const hasAudio = !!j.has_audio;
   const spMap = buildSpeakerMap(r);
   const aliases = loadAliases(j.id);
+  // 自动分段的时间修正：展示用全片绝对时间（本段相对 + 段起点偏移），
+  // 播放器/跳转仍用相对时间（data-t0 存相对值，音频时间域不变）
+  const off = j.params.seg_offset_ms || 0;
 
   const meta = [
     tn('metaSegs', { n: r.segments.length }),
@@ -941,7 +946,7 @@ function resultBlock(j, cardMs = false) {
   const segs = r.segments.length ? r.segments.map((s) => `
     <div class="seg">
       ${hasAudio && !noTs ? `<button class="seg-play" data-t0="${s.t0_ms}" title="${esc(t('segPlayTitle'))}">▶</button>` : ''}
-      ${noTs ? '' : `<span class="seg-time" data-t0="${s.t0_ms}" data-t1="${s.t1_ms}">${fmtClockMs(s.t0_ms, cardMs)} → ${fmtClockMs(s.t1_ms, cardMs)}</span>`}
+      ${noTs ? '' : `<span class="seg-time" data-t0="${s.t0_ms}" data-t1="${s.t1_ms}">${fmtClockMs(s.t0_ms + off, cardMs)} → ${fmtClockMs(s.t1_ms + off, cardMs)}</span>`}
       ${withDiarize ? `<span class="seg-speaker" data-sid="${s.speaker_id}" style="--sp:${speakerColor(spMap.get(s.speaker_id) ?? 1)}">${esc(speakerName(spMap, s.speaker_id, aliases))}</span>` : ''}
       <span class="seg-text">${esc(s.text)}</span>
     </div>`).join('')
@@ -957,7 +962,7 @@ function resultBlock(j, cardMs = false) {
       <span class="player-time">0:00 / ${fmtClock(j.audio_ms || 0)}</span>
       <audio class="job-audio" src="/api/jobs/${esc(j.id)}/audio" preload="none"></audio>
     </div>` : ''}
-    ${withDiarize && !noTs ? timeline(r, spMap, cardMs, aliases) : ''}
+    ${withDiarize && !noTs ? timeline(r, spMap, cardMs, aliases, off) : ''}
     <div class="result-actions">
       <button class="btn mini" data-action="copy">${esc(t('btnCopy'))}</button>
       <button class="btn mini" data-action="txt">${esc(t('btnTxt'))}</button>
@@ -974,7 +979,7 @@ function resultBlock(j, cardMs = false) {
   </div>`;
 }
 
-function timeline(r, spMap, ms = false, aliases = null) {
+function timeline(r, spMap, ms = false, aliases = null, off = 0) {
   const segs = r.speaker_segments || [];
   if (!segs.length) return '';
   const dur = Math.max(...segs.map((s) => s.t1_ms), 1);
@@ -991,7 +996,7 @@ function timeline(r, spMap, ms = false, aliases = null) {
       <div class="tl-track">${list.map((s) =>
         `<div class="tl-bar" style="left:${(s.t0_ms / dur * 100).toFixed(2)}%;width:${Math.max((s.t1_ms - s.t0_ms) / dur * 100, 0.3).toFixed(2)}%;background:${speakerColor(num)}"
               data-t0="${s.t0_ms}" data-t1="${s.t1_ms}"${s.p != null ? ` data-p="${s.p}"` : ''}
-              title="${fmtClockMs(s.t0_ms, ms)} – ${fmtClockMs(s.t1_ms, ms)}${s.p != null ? `（置信度 ${(s.p * 100).toFixed(0)}%）` : ''}"></div>`).join('')}</div>
+              title="${fmtClockMs(s.t0_ms + off, ms)} – ${fmtClockMs(s.t1_ms + off, ms)}${s.p != null ? `（置信度 ${(s.p * 100).toFixed(0)}%）` : ''}"></div>`).join('')}</div>
     </div>`;
   }).join('');
   return `<div class="timeline">${bars}</div>`;
@@ -1000,8 +1005,8 @@ function timeline(r, spMap, ms = false, aliases = null) {
 // ---- 导出 ----
 // ms：跟随结果卡片的毫秒开关（按钮所在卡片的 data-ms）
 
-function segLine(s, withDiarize, spMap, noTs, ms = false, aliases = null) {
-  const time = noTs ? '' : `[${fmtClockMs(s.t0_ms, ms)} → ${fmtClockMs(s.t1_ms, ms)}] `;
+function segLine(s, withDiarize, spMap, noTs, ms = false, aliases = null, off = 0) {
+  const time = noTs ? '' : `[${fmtClockMs(s.t0_ms + off, ms)} → ${fmtClockMs(s.t1_ms + off, ms)}] `;
   const sp = withDiarize ? `${speakerName(spMap, s.speaker_id, aliases)}: ` : '';
   return `${time}${sp}${s.text}`;
 }
@@ -1012,7 +1017,8 @@ function fullText(j, ms = false) {
   const noTs = j.params.timestamps === 'none';
   const spMap = buildSpeakerMap(j.result);
   const aliases = loadAliases(j.id);
-  return j.result.segments.map((s) => segLine(s, withDiarize, spMap, noTs, ms, aliases)).join('\n');
+  const off = j.params.seg_offset_ms || 0;
+  return j.result.segments.map((s) => segLine(s, withDiarize, spMap, noTs, ms, aliases, off)).join('\n');
 }
 
 function srtTime(ms) {
@@ -1025,9 +1031,10 @@ function toSRT(j) {
   const withDiarize = j.params.diarize === 'on';
   const spMap = buildSpeakerMap(j.result);
   const aliases = loadAliases(j.id);
+  const off = j.params.seg_offset_ms || 0;
   return j.result.segments.map((s, i) => {
     const sp = withDiarize ? `${speakerName(spMap, s.speaker_id, aliases)}: ` : '';
-    return `${i + 1}\n${srtTime(s.t0_ms)} --> ${srtTime(s.t1_ms)}\n${sp}${s.text}\n`;
+    return `${i + 1}\n${srtTime(s.t0_ms + off)} --> ${srtTime(s.t1_ms + off)}\n${sp}${s.text}\n`;
   }).join('\n');
 }
 
@@ -1119,6 +1126,8 @@ $('jobs').addEventListener('click', async (e) => {
         download(`${baseName(job)}.srt`, toSRT(job));
         break;
       case 'json':
+        // 时间戳保持本段相对值（原始数据），seg_offset_ms 供程序消费方
+        // 还原全片绝对时间（分段任务独有字段）
         download(`${baseName(job)}.json`, JSON.stringify(job, null, 2));
         break;
     }
