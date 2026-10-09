@@ -72,6 +72,7 @@ const I18N = {
     warnFileTooBig: '文件 {name} 大小 {size}，超过上传上限 {limit}，未上传',
     warnAudioTooLong: '文件 {name} 时长约 {dur}，超过单次处理上限 {limit}。可开启「长音频自动分段」后再上传，或裁剪音频',
     warnBatchSkipped: '{n} 个文件未上传：',
+    jobIdTip: '任务 ID: {id}',
     toastCancelled: '已请求取消', toastCopied: '已复制到剪贴板',
     toastOpFail: '操作失败: {msg}', toastWaitJobs: '请等待任务结束再切换设备',
     toastReloading: '开始重载模型…', toastSwitchFail: '切换失败: {msg}',
@@ -136,6 +137,7 @@ const I18N = {
     warnFileTooBig: '{name} is {size}, over the {limit} upload limit — not uploaded',
     warnAudioTooLong: '{name} is about {dur}, over the per-run limit of {limit}. Enable auto-split before uploading, or trim the audio',
     warnBatchSkipped: '{n} file(s) not uploaded:',
+    jobIdTip: 'Job ID: {id}',
     toastCancelled: 'Cancel requested', toastCopied: 'Copied to clipboard',
     toastOpFail: 'Operation failed: {msg}', toastWaitJobs: 'Wait for running jobs to finish before switching devices',
     toastReloading: 'Reloading model…', toastSwitchFail: 'Switch failed: {msg}',
@@ -909,7 +911,7 @@ function jobCard(j, msPrecision = false) {
   return `
   <div class="card job" data-id="${j.id}">
     <div class="job-head">
-      <div class="job-title" title="${esc(j.filename)}">📁 ${esc(j.filename)}</div>
+      <div class="job-title" title="${esc(j.filename)}&#10;${esc(t('jobIdTip', { id: j.id }))}">📁 ${esc(j.filename)}</div>
       <span class="badge ${j.status}">${esc(badgeText)}</span>
       ${actions}
     </div>
