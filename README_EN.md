@@ -12,7 +12,7 @@ A **high-performance local** speech transcription WebUI built on [`transcribe.cp
 
 ![ScreenShot_EN](readme_pic/ScreenShot_EN.png)
 
-[Download](https://github.com/TigerSHe1998/Moss-Transcribe-WebUI/releases)
+[Download](https://github.com/TigerSHe1998/Moss-Transcribe-WebUI/releases/tag/v0.3.2)
 
 </div>
 
@@ -65,7 +65,7 @@ Run `transcribe --help` for all options.
 - [X] **Speaker aliases**: click the ✎ next to a timeline name to rename "Speaker 1" to anything (e.g. Sam)
 - [X] **Timestamp precision**: per-result toggle for millisecond-level timestamps (seconds by default)
 - [X] **Playback player**: play/pause, draggable seek bar, automatic highlighting with scroll-follow of the matching text, timeline-bar click to jump to an entry
-- [X] **Auto-split for long audio**: useful for low VRAM hardware — audio longer than the selected window (15/30/45/60 min) is automatically split into queued jobs
+- [X] **Auto-split for long audio**: useful for low VRAM hardware — audio longer than the selected window (15/30/45/60 min) is automatically split into queued jobs, auto-split results carry absolute timestamps
 - [X] **Batch upload**: enable batch mode to select multiple files at once; they are uploaded and queued one by one
 - [X] **Multilanguage support (中文 / English)**: one-click language toggle in the header
 - [X] **CLI for Agent use**: `cli\transcribe.bat` one-shot transcription (single file / folder batch), attaches to or starts a WebUI service automatically, supports all transcription options and remote services
