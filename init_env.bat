@@ -41,7 +41,7 @@ if errorlevel 1 (
     echo [ERROR] pip self-upgrade failed. Check your network / proxy.
     goto :fail
 )
-"%VENV_PY%" -m pip install "fastapi==0.141.1" "uvicorn==0.53.0" "python-multipart==0.0.32" "numpy==2.5.3" "transcribe-cpp==0.3.1"
+"%VENV_PY%" -m pip install "fastapi==0.141.1" "uvicorn==0.53.0" "python-multipart==0.0.32" "numpy==2.5.3" "transcribe-cpp==0.4.0"
 if errorlevel 1 (
     echo [ERROR] Failed to install PyPI packages. Check your network / proxy.
     goto :fail
