@@ -35,11 +35,11 @@ const I18N = {
     vocabBtnSave: '保存', vocabBtnCancel: '取消', vocabBtnImport: '导入',
     vocabCount: '{n} 个热词',
     vocabWarnMany: '热词数量过多，可能影响模型表现',
-    vocabErrComma: '热词请使用英文逗号（,）分隔，当前包含中文逗号',
+    vocabErrComma: '热词请使用英文逗号分隔，当前包含中文逗号',
     vocabErrEmptyTerm: '存在空热词（连续逗号或首尾逗号），请检查',
     vocabErrFile: '导入失败: {msg}',
     vocabErrTxtFormat: 'txt 文件应为单行英文逗号分隔的词汇表',
-    vocabCaseHint: '英文热词区分大小写，请按实际拼写输入',
+    vocabCaseHint: '注: 英文热词区分大小写，请按实际拼写输入',
     advanced: '高级设置', lblKv: 'KV 缓存类型', lblThreads: 'CPU 线程数（0 = 默认）',
     lblCtx: '上下文长度 n_ctx（0 = 默认）',
     noteCtx: 'n_ctx 默认 131072，调小会降低单次音频的时长上限；线程数仅在 CPU 后端生效。',
@@ -109,15 +109,15 @@ const I18N = {
     noteChunk: 'If VRAM is insufficient, enable auto-split to reduce memory pressure. Speaker IDs and aliases are not synced across segments — set them manually.',
     lblVocab: 'Hotwords',
     vocabPlaceholder: 'Add words the model tends to mishear, separated by commas',
-    vocabEmptyTags: 'No hotwords yet — click to add',
+    vocabEmptyTags: 'No hotwords set — click to add',
     vocabBtnSave: 'Save', vocabBtnCancel: 'Cancel', vocabBtnImport: 'Import',
     vocabCount: '{n} hotword{-s}',
     vocabWarnMany: 'Too many hotwords may degrade model performance',
-    vocabErrComma: 'Separate hotwords with ASCII commas (,) — a full-width comma was found',
+    vocabErrComma: 'Separate hotwords with ASCII commas — a full-width comma was found',
     vocabErrEmptyTerm: 'Empty hotword detected (consecutive or leading/trailing commas)',
     vocabErrFile: 'Import failed: {msg}',
     vocabErrTxtFormat: 'A txt file must be a single line of comma-separated terms',
-    vocabCaseHint: 'English hotwords are case-sensitive — type them as actually spoken',
+    vocabCaseHint: 'Note: English hotwords are case-sensitive',
     advanced: 'Advanced', lblKv: 'KV cache type', lblThreads: 'CPU threads (0 = default)',
     lblCtx: 'Context length n_ctx (0 = default)',
     noteCtx: 'n_ctx defaults to 131072; lowering it reduces the max audio length per run. Threads apply to the CPU backend only.',
@@ -531,7 +531,7 @@ function vocabPaintHint() {
   const { terms, error } = vocabValidate(input.value);
   const changed = input.value !== vocabSnapshot;
   $('vocab-save').disabled = !changed || !!error;
-  $('vocab-cancel').disabled = !changed;
+  // 取消不因「未变化」禁用：它是退出编辑态的唯一出口（保存未变化时禁用即可）
   if (error) {
     hint.textContent = t(error);
     hint.className = 'vocab-hint error';
@@ -1353,6 +1353,10 @@ $('lang-btn').addEventListener('click', () => {
   applyStaticTexts();
   if (status) renderStatus();
   renderJobs(); // jobSig 已含 lang，所有卡片自动按新语言重建
+  // 热词组件的动态文案（view 态提示 / 编辑态 hint）不在 data-i18n 体系内，
+  // 切语言时手动重绘
+  vocabRenderView();
+  if (!$('vocab-edit').hidden) vocabPaintHint();
 });
 
 $('dz-hint').textContent = t('dzHint');

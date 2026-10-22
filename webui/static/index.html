@@ -6,7 +6,7 @@
 <title>Moss Transcribe WebUI</title>
 <link rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
-<link rel="stylesheet" href="/static/style.css?v=20261022e">
+<link rel="stylesheet" href="/static/style.css?v=20261022f">
 </head>
 <body>
 <header>
@@ -53,17 +53,18 @@
           </select>
         </label>
         <div class="field vocab-field" id="vocab-field" hidden>
-          <span data-i18n="lblVocab">热词</span>
+          <div class="vocab-head">
+            <span data-i18n="lblVocab">热词</span>
+            <button type="button" class="btn tiny" id="vocab-import" data-i18n="vocabBtnImport">导入</button>
+          </div>
           <div class="vocab-box" id="vocab-box">
             <div class="vocab-view" id="vocab-view" tabindex="0"></div>
             <div class="vocab-edit" id="vocab-edit" hidden>
               <textarea id="vocab-input" rows="3" spellcheck="false"></textarea>
               <div class="vocab-hint" id="vocab-hint"></div>
               <div class="vocab-toolbar">
-                <span></span>
                 <div class="vocab-actions">
-                  <button type="button" class="btn tiny" id="vocab-import" data-i18n="vocabBtnImport">导入</button>
-                  <button type="button" class="btn tiny" id="vocab-cancel" data-i18n="vocabBtnCancel" disabled>取消</button>
+                  <button type="button" class="btn tiny" id="vocab-cancel" data-i18n="vocabBtnCancel">取消</button>
                   <button type="button" class="btn tiny primary" id="vocab-save" data-i18n="vocabBtnSave" disabled>保存</button>
                 </div>
               </div>
@@ -178,6 +179,6 @@
 </main>
 
 <div id="toast" hidden></div>
-<script src="/static/app.js?v=20261022e"></script>
+<script src="/static/app.js?v=20261022f"></script>
 </body>
 </html>
