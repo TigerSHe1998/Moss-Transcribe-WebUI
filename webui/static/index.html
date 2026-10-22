@@ -6,7 +6,7 @@
 <title>Moss Transcribe WebUI</title>
 <link rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
-<link rel="stylesheet" href="/static/style.css?v=20261022f">
+<link rel="stylesheet" href="/static/style.css?v=20261022g">
 </head>
 <body>
 <header>
@@ -55,7 +55,12 @@
         <div class="field vocab-field" id="vocab-field" hidden>
           <div class="vocab-head">
             <span data-i18n="lblVocab">热词</span>
-            <button type="button" class="btn tiny" id="vocab-import" data-i18n="vocabBtnImport">导入</button>
+            <!-- 预设 1/2/3 常显于右上角（与标题同行）：当前选中高亮，点击直接切换 -->
+            <div class="vocab-presets" id="vocab-presets">
+              <button type="button" class="btn tiny vp" data-preset="1">1</button>
+              <button type="button" class="btn tiny vp" data-preset="2">2</button>
+              <button type="button" class="btn tiny vp" data-preset="3">3</button>
+            </div>
           </div>
           <div class="vocab-box" id="vocab-box">
             <div class="vocab-view" id="vocab-view" tabindex="0"></div>
@@ -63,18 +68,13 @@
               <textarea id="vocab-input" rows="3" spellcheck="false"></textarea>
               <div class="vocab-hint" id="vocab-hint"></div>
               <div class="vocab-toolbar">
+                <button type="button" class="btn tiny" id="vocab-import" data-i18n="vocabBtnImport">导入</button>
                 <div class="vocab-actions">
                   <button type="button" class="btn tiny" id="vocab-cancel" data-i18n="vocabBtnCancel">取消</button>
                   <button type="button" class="btn tiny primary" id="vocab-save" data-i18n="vocabBtnSave" disabled>保存</button>
                 </div>
               </div>
               <input type="file" id="vocab-file" accept=".csv,.txt" hidden>
-            </div>
-            <!-- 预设 1/2/3 常显（view/edit 两态共用）：当前选中高亮，点击直接切换 -->
-            <div class="vocab-presets" id="vocab-presets">
-              <button type="button" class="btn tiny vp" data-preset="1">1</button>
-              <button type="button" class="btn tiny vp" data-preset="2">2</button>
-              <button type="button" class="btn tiny vp" data-preset="3">3</button>
             </div>
           </div>
         </div>
@@ -179,6 +179,6 @@
 </main>
 
 <div id="toast" hidden></div>
-<script src="/static/app.js?v=20261022f"></script>
+<script src="/static/app.js?v=20261022g"></script>
 </body>
 </html>

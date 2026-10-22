@@ -782,7 +782,7 @@ audio.job-audio { display: none; }
 .vocab-hint { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
 .vocab-hint.warn { color: var(--amber); }
 .vocab-hint.error { color: var(--rec); }
-.vocab-toolbar { display: flex; justify-content: flex-end; align-items: center; margin-top: 6px; gap: 8px; }
-.vocab-presets { display: flex; gap: 4px; margin-top: 6px; }
+.vocab-toolbar { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; gap: 8px; }
+.vocab-presets { display: flex; gap: 4px; }
 .vp.active { background: var(--moss); border-color: var(--moss); color: #fff; }
 .vocab-actions { display: flex; gap: 6px; }
