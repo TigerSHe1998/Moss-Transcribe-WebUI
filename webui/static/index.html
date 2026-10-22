@@ -6,13 +6,17 @@
 <title>Moss Transcribe WebUI</title>
 <link rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
-<link rel="stylesheet" href="/static/style.css?v=20261022g">
+<link rel="stylesheet" href="/static/style.css?v=20261022j">
 </head>
 <body>
 <header>
   <div id="header-left">
     <h1>Moss Transcribe WebUI</h1>
     <button id="lang-btn" class="btn tiny" title="切换界面语言">English</button>
+    <button id="theme-btn" class="btn tiny icon" title="切换深浅主题" aria-label="切换深浅主题">
+      <svg class="ic-sun" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.4"/><path d="M8 .8v2.2M8 13v2.2M.8 8h2.2M13 8h2.2M2.5 2.5l1.6 1.6M11.9 11.9l1.6 1.6M13.5 2.5l-1.6 1.6M4.1 11.9l-1.6 1.6" stroke-linecap="round"/></svg>
+      <svg class="ic-moon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.4 9.9A6 6 0 0 1 6.1 2.6 6 6 0 1 0 13.4 9.9z"/></svg>
+    </button>
   </div>
   <div id="header-right">
     <div id="model-chip" class="chip loading" data-i18n="chipInit">初始化…</div>
@@ -179,6 +183,6 @@
 </main>
 
 <div id="toast" hidden></div>
-<script src="/static/app.js?v=20261022g"></script>
+<script src="/static/app.js?v=20261022h"></script>
 </body>
 </html>

@@ -27,6 +27,15 @@
   --rec-soft: #f7e9e5;
   /* 仪表条 */
   --track: #e0e4db;
+  /* 画布与浅色专属面（dark 主题覆盖） */
+  --canvas: #ffffff;
+  --hover: #f4f6f1;
+  --decl-bg: #f5f7f2;
+  --panel: #ffffff;          /* seg-list / 对话框等白面板 */
+  --chip-load-line: #e3d5b3;
+  --chip-err-line: #e4c0b6;
+  --danger-line: #ddbab0;
+  --warn-fill: #c07b17;      /* 顶栏显存条 amber 档（浅色下比 --amber 亮一档） */
   /* 几何 */
   --r-lg: 8px;   /* 卡片/大容器 */
   --r-md: 5px;   /* 按钮/输入框 */
@@ -38,6 +47,38 @@
   --font-mono: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
 }
 
+/* ============ 深色主题 ============
+   深底亮字：面板墨绿黑、文字苔绿白；品牌绿提亮一档保对比度 */
+html[data-theme="dark"] {
+  color-scheme: dark; /* 原生控件（下拉/滚动条/输入框）跟随深色 */
+  --bg: #171d19;
+  --card: #1c2420;
+  --field: #223029;
+  --line: #2c3a32;
+  --line-strong: #3d4f44;
+  --ink: #e4ece6;
+  --muted: #9fb0a5;
+  --faint: #6e7f74;
+  --moss: #5ea87e;
+  --moss-deep: #74bd93;
+  --moss-soft: #24352c;
+  --moss-line: #3d5a49;
+  --amber: #d9a13f;
+  --amber-soft: #33290f;
+  --rec: #e0745d;
+  --rec-soft: #38201a;
+  --track: #2a352e;
+  --canvas: #141a16;
+  --hover: #242e28;
+  --decl-bg: #1a221d;
+  --panel: #1c2420;
+  --chip-load-line: #4a3c1c;
+  --chip-err-line: #4a2b22;
+  --danger-line: #4a2b22;
+  --warn-fill: #d9a13f;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 2px 10px rgba(0, 0, 0, .25);
+}
+
 * { box-sizing: border-box; }
 
 /* hidden 属性必须优先于任何 display 规则
@@ -46,7 +87,7 @@
 
 body {
   margin: 0;
-  background: #ffffff; /* 页面画布纯白（用户定稿）；--bg 仅供 hover/灰态徽章等浅灰绿面使用 */
+  background: var(--canvas); /* 画布（浅色=纯白用户定稿；深色主题覆盖） */
   color: var(--ink);
   font: 14px/1.65 var(--font-body);
   -webkit-font-smoothing: antialiased;
@@ -100,8 +141,8 @@ header h1 {
   white-space: nowrap;
 }
 .chip.ready { color: var(--moss-deep); border-color: var(--moss-line); background: var(--moss-soft); }
-.chip.loading { color: var(--amber); border-color: #e3d5b3; background: var(--amber-soft); }
-.chip.error { color: var(--rec); border-color: #e4c0b6; background: var(--rec-soft); }
+.chip.loading { color: var(--amber); border-color: var(--chip-load-line); background: var(--amber-soft); }
+.chip.error { color: var(--rec); border-color: var(--chip-err-line); background: var(--rec-soft); }
 
 /* 顶栏显存仪表（长条 → 药丸是既定偏好） */
 .mem-bar {
@@ -121,7 +162,7 @@ header h1 {
   background: var(--moss);
   transition: width .6s ease;
 }
-.mem-fill.warn { background: #c07b17; }
+.mem-fill.warn { background: var(--warn-fill); }
 .mem-fill.crit { background: var(--rec); }
 .mem-text {
   position: absolute;
@@ -165,7 +206,7 @@ aside { position: sticky; top: 78px; }
 .console { padding: 0; }
 .cs { padding: 15px 17px 16px; }
 .cs + .cs { border-top: 1px solid var(--line); }
-.cs-decl { background: #f5f7f2; border-radius: 0 0 var(--r-lg) var(--r-lg); }
+.cs-decl { background: var(--decl-bg); border-radius: 0 0 var(--r-lg) var(--r-lg); }
 
 .cs h2 {
   font-family: var(--font-display);
@@ -253,6 +294,9 @@ details[open] summary::after { transform: rotate(180deg); }
 .btn:hover { background: var(--bg); border-color: var(--faint); }
 .btn:active { transform: translateY(1px); }
 .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+/* 深色下 45% 整体透明会让 primary 的白字对比崩掉（灰绿底+半透明白）：
+   改为压暗背景、文字保持全亮 */
+html[data-theme="dark"] .btn:disabled { opacity: 1; background: var(--track); border-color: var(--track); color: var(--faint); }
 .btn.primary {
   background: var(--moss);
   border-color: var(--moss);
@@ -261,7 +305,7 @@ details[open] summary::after { transform: rotate(180deg); }
 }
 .btn.primary:hover:not(:disabled) { background: var(--moss-deep); border-color: var(--moss-deep); }
 .btn.secondary { width: 100%; margin-top: 6px; }
-.btn.danger { color: var(--rec); border-color: #ddbab0; }
+.btn.danger { color: var(--rec); border-color: var(--danger-line); }
 .btn.danger:hover { background: var(--rec-soft); border-color: var(--rec); }
 .btn.tiny { padding: 2px 9px; font-size: 12px; }
 .btn.mini { padding: 4px 11px; font-size: 12.5px; }
@@ -287,7 +331,7 @@ details[open] summary::after { transform: rotate(180deg); }
   text-align: center;
   cursor: pointer;
   transition: border-color .15s, background .15s;
-  background: #f6f8f4;
+  background: var(--hover);
 }
 #dropzone:hover, #dropzone.drag {
   border-color: var(--moss);
@@ -454,7 +498,7 @@ details[open] summary::after { transform: rotate(180deg); }
   left: 2px;
   width: 14px;
   height: 14px;
-  background: #fff;
+  background: var(--panel);
   border-radius: 50%;
   transition: left .15s ease;
   box-shadow: 0 1px 2px rgba(30, 38, 32, .25);
@@ -527,7 +571,7 @@ audio.job-audio { display: none; }
   gap: 4px;
   margin-bottom: 12px;
   padding: 10px;
-  background: #f4f6f1;
+  background: var(--hover);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
 }
@@ -611,7 +655,7 @@ audio.job-audio { display: none; }
   transition: background .12s;
 }
 .seg:last-child { border-bottom: none; }
-.seg:hover { background: #f4f6f1; }
+.seg:hover { background: var(--hover); }
 /* 播放中分段：苔绿底 + 左缘刻度线 */
 .seg.active { background: var(--moss-soft); box-shadow: inset 2px 0 0 var(--moss); }
 .seg-play {
@@ -686,7 +730,7 @@ audio.job-audio { display: none; }
   bottom: 26px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--ink);
+  background: #1e2620;  /* 固定深底浅字（与主题无关，深色下也保持对比） */
   color: #f4f6f1;
   padding: 10px 20px;
   border-radius: 6px;
@@ -786,3 +830,13 @@ audio.job-audio { display: none; }
 .vocab-presets { display: flex; gap: 4px; }
 .vp.active { background: var(--moss); border-color: var(--moss); color: #fff; }
 .vocab-actions { display: flex; gap: 6px; }
+
+/* ============ 主题切换按钮 ============ */
+/* 图标按当前主题显示：浅色态显示月亮（点击进入深色），深色态显示太阳 */
+#theme-btn { display: inline-flex; align-items: center; justify-content: center; padding: 3px 5px; border: none; background: none; }
+#theme-btn:hover { background: var(--hover); }
+#theme-btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; }
+#theme-btn .ic-moon { display: block; }
+#theme-btn .ic-sun { display: none; }
+html[data-theme="dark"] #theme-btn .ic-moon { display: none; }
+html[data-theme="dark"] #theme-btn .ic-sun { display: block; }
