@@ -12,7 +12,7 @@
 
 ![ScreenShot_CN](readme_pic/ScreenShot_CN.png)
 
-[前往下载](https://github.com/TigerSHe1998/Moss-Transcribe-WebUI/releases/tag/v0.3.2)
+[前往下载](https://github.com/TigerSHe1998/Moss-Transcribe-WebUI/releases/tag/v0.4.0)
 
 </div>
 
@@ -45,11 +45,12 @@ run_webui.bat          :: 启动后本机访问 http://127.0.0.1:8390
 `cli\transcribe.bat` 提供无需打开浏览器的一键转录，适合脚本调用或 AI Agent 集成。将 `cli` 文件夹加入 PATH 环境变量后即可便捷全局使用：
 
 ```bat
-transcribe meeting.wav                       :: 单文件转录（输出 meeting.txt）
-transcribe --batch ./recordings --output all :: 文件夹批量转录，输出 txt/srt/json
-transcribe --list-backend                    :: 列出可用推理后端
-transcribe voice.mp3 --autosplit 15          :: 长音频按 15 分钟自动分段
-transcribe voice.mp3 --host 192.168.50.2     :: 对接局域网内已运行的 WebUI 服务
+transcribe meeting.wav                        :: 单文件转录（输出 meeting.txt）
+transcribe --batch ./recordings --output all  :: 文件夹批量转录，输出 txt/srt/json
+transcribe --list-backend                     :: 列出可用推理后端
+transcribe voice.mp3 --autosplit 15           :: 长音频按 15 分钟自动分段
+transcribe voice.mp3 --vocabulary "hot,words" :: 传入热词列表（英文逗号分隔）
+transcribe voice.mp3 --host 192.168.50.2      :: 对接局域网内已运行的 WebUI 服务
 ```
 
 CLI 会自动检测 WebUI 服务是否存在：已在运行则直接对接，本机无服务则自动启动并在完成后停止。
@@ -69,7 +70,8 @@ CLI 会自动检测 WebUI 服务是否存在：已在运行则直接对接，本
 - [X] **批量上传**：开启「批量模式」后支持一次选择多个文件，逐个自动上传排队
 - [X] **English Support**：一键切换界面语言（中文 / English）
 - [X] **CLI 供 Agent 快速转录**：`cli\transcribe.bat` 一键转录（单文件 / 文件夹批量），自动对接或拉起 WebUI 服务，支持全部转录选项与远程服务
-- [ ] **热词支持**：transcribe.cpp 后端暂未适配 Moss 模型的热词输入，上游适配后跟进
+- [X] **热词支持**：支持录入热词列表，纠正容易听错的专有名词（三个快速保存预设、可导入 csv/txt 文件）
+- [X] **深色模式**：顶栏按钮一键切换深浅主题，偏好记忆在本地
 
 ## 其他说明
 

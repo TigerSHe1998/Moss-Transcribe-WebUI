@@ -12,7 +12,7 @@ A **high-performance local** speech transcription WebUI built on [`transcribe.cp
 
 ![ScreenShot_EN](readme_pic/ScreenShot_EN.png)
 
-[Download](https://github.com/TigerSHe1998/Moss-Transcribe-WebUI/releases/tag/v0.3.2)
+[Download](https://github.com/TigerSHe1998/Moss-Transcribe-WebUI/releases/tag/v0.4.0)
 
 </div>
 
@@ -45,11 +45,12 @@ Available options: `-h/--help`, `--host`, `--port`, `-m/--model` (GGUF path; def
 `cli\transcribe.bat` offers one-shot transcription without opening the browser — ideal for scripts and AI Agent integration. Add the `cli` folder to PATH for global availability:
 
 ```bat
-transcribe meeting.wav                       :: single file transcription (writes meeting.txt)
-transcribe --batch ./recordings --output all :: batch a folder, writes txt/srt/json
-transcribe --list-backend                    :: list available inference backends
-transcribe voice.mp3 --autosplit 15          :: auto-split long audio every 15 minutes
-transcribe voice.mp3 --host 192.168.50.2     :: use a WebUI service on the LAN
+transcribe meeting.wav                        :: single file transcription (writes meeting.txt)
+transcribe --batch ./recordings --output all  :: batch a folder, writes txt/srt/json
+transcribe --list-backend                     :: list available inference backends
+transcribe voice.mp3 --autosplit 15           :: auto-split long audio every 15 minutes
+transcribe voice.mp3 --vocabulary "hot,words" :: pass in hotwords as a comma seperated list
+transcribe voice.mp3 --host 192.168.50.2      :: use a WebUI service on the LAN
 ```
 
 The CLI detects the service automatically: if one is already running it attaches (and leaves it running afterwards); otherwise it starts a local service and stops it when finished. 
@@ -69,7 +70,8 @@ Run `transcribe --help` for all options.
 - [X] **Batch upload**: enable batch mode to select multiple files at once; they are uploaded and queued one by one
 - [X] **Multilanguage support (中文 / English)**: one-click language toggle in the header
 - [X] **CLI for Agent use**: `cli\transcribe.bat` one-shot transcription (single file / folder batch), attaches to or starts a WebUI service automatically, supports all transcription options and remote services
-- [ ] **Hotwords**: the transcribe.cpp backend does not yet support hotword input for Moss models; will follow once upstream lands
+- [X] **Hotwords**: edit hotwords in transcription settings (three presets, csv/txt import) to fix proper-noun spelling
+- [X] **Dark mode**: one-click light/dark theme toggle in the header
 
 ## Notes
 

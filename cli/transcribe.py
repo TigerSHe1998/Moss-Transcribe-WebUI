@@ -29,7 +29,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 PROG = "transcribe"
-VERSION = "0.3.2"   # keep in sync with webui/server.py __version__
+VERSION = "0.4.0"   # keep in sync with webui/server.py __version__
 
 MEDIA_EXTS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".opus", ".aac",
               ".wma", ".mp4", ".mkv", ".webm", ".mov", ".avi"}

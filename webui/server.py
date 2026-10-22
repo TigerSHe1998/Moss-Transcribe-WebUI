@@ -31,7 +31,7 @@ DEFAULT_MODEL = str(Path(__file__).resolve().parent.parent / "resources" / "mode
 MAX_UPLOAD_BYTES = 32 * 1024**3
 STATIC_DIR = Path(__file__).parent / "static"
 
-__version__ = "0.3.2"  # WebUI 版本号（/api/status 下发，CLI 独立维护同值）
+__version__ = "0.4.0"  # WebUI 版本号（/api/status 下发，CLI 独立维护同值）
 
 _NATIVE_LEVELS = {1: logging.INFO, 2: logging.WARNING, 3: logging.ERROR, 4: logging.DEBUG}
 
