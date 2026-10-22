@@ -29,6 +29,17 @@ const I18N = {
     chunkOff: '关闭', chunk15: '15分钟（推荐显存 8G）', chunk30: '30分钟（推荐显存 12G）',
     chunk45: '45分钟（推荐显存 16G）', chunk60: '60分钟（推荐显存 20G）',
     noteChunk: '显存不足时，可开启音频自动分段降低显存压力；自动分段产生的转录结果之间说话人序号和别名不会同步，需手动设置。',
+    lblVocab: '热词',
+    vocabPlaceholder: '可添加容易听错的常用词汇，用英文逗号分隔',
+    vocabEmptyTags: '未设置热词，点击添加',
+    vocabBtnSave: '保存', vocabBtnCancel: '取消', vocabBtnImport: '导入',
+    vocabCount: '{n} 个热词',
+    vocabWarnMany: '热词数量过多，可能影响模型表现',
+    vocabErrComma: '热词请使用英文逗号（,）分隔，当前包含中文逗号',
+    vocabErrEmptyTerm: '存在空热词（连续逗号或首尾逗号），请检查',
+    vocabErrFile: '导入失败: {msg}',
+    vocabErrTxtFormat: 'txt 文件应为单行英文逗号分隔的词汇表',
+    vocabCaseHint: '英文热词区分大小写，请按实际拼写输入',
     advanced: '高级设置', lblKv: 'KV 缓存类型', lblThreads: 'CPU 线程数（0 = 默认）',
     lblCtx: '上下文长度 n_ctx（0 = 默认）',
     noteCtx: 'n_ctx 默认 131072，调小会降低单次音频的时长上限；线程数仅在 CPU 后端生效。',
@@ -96,6 +107,17 @@ const I18N = {
     chunkOff: 'Off', chunk15: '15 min (8G VRAM recommended)', chunk30: '30 min (12G VRAM recommended)',
     chunk45: '45 min (16G VRAM recommended)', chunk60: '60 min (20G VRAM recommended)',
     noteChunk: 'If VRAM is insufficient, enable auto-split to reduce memory pressure. Speaker IDs and aliases are not synced across segments — set them manually.',
+    lblVocab: 'Hotwords',
+    vocabPlaceholder: 'Add words the model tends to mishear, separated by commas',
+    vocabEmptyTags: 'No hotwords yet — click to add',
+    vocabBtnSave: 'Save', vocabBtnCancel: 'Cancel', vocabBtnImport: 'Import',
+    vocabCount: '{n} hotword{-s}',
+    vocabWarnMany: 'Too many hotwords may degrade model performance',
+    vocabErrComma: 'Separate hotwords with ASCII commas (,) — a full-width comma was found',
+    vocabErrEmptyTerm: 'Empty hotword detected (consecutive or leading/trailing commas)',
+    vocabErrFile: 'Import failed: {msg}',
+    vocabErrTxtFormat: 'A txt file must be a single line of comma-separated terms',
+    vocabCaseHint: 'English hotwords are case-sensitive — type them as actually spoken',
     advanced: 'Advanced', lblKv: 'KV cache type', lblThreads: 'CPU threads (0 = default)',
     lblCtx: 'Context length n_ctx (0 = default)',
     noteCtx: 'n_ctx defaults to 131072; lowering it reduces the max audio length per run. Threads apply to the CPU backend only.',
@@ -415,12 +437,18 @@ function renderStatus() {
   $('device-note').textContent = m.loading ? t('deviceNoteLoading')
     : (m.error ? t('deviceNoteError', { msg: m.error }) : '');
 
-  // 说话人分离选项跟随模型能力
+  // 说话人分离选项跟随模型能力；热词输入区同样只在模型支持时显示
   const caps = status.capabilities;
   if (caps) {
     const diaSel = $('opt-diarize');
     diaSel.disabled = !caps.supports_diarization;
     diaSel.title = caps.supports_diarization ? '' : t('diaUnsupported');
+    const vf = $('vocab-field');
+    const supported = !!caps.supports_vocabulary;
+    if (vf.hidden === supported) { // 仅在能力变化时动 DOM，避免打断编辑
+      vf.hidden = !supported;
+      if (!supported) currentVocabTerms = [];
+    }
   }
 
   // 运行信息
@@ -447,6 +475,171 @@ function renderStatus() {
 
 function updateStartBtn() {
   $('start-btn').disabled = uploading || !selectedFiles.length || status?.model?.state !== 'ready';
+}
+
+// ---- 热词（vocabulary）----
+// 两态组件：view（标签展示）⇄ edit（文本框 + 预设1-3/导入/保存/取消）。
+// 预设存 localStorage（vocab-preset-N，逗号串）；currentVocabTerms 是
+// 当前生效词条（提交任务时读取）；编辑未保存时点其他预设 = 放弃修改
+// 直接加载目标预设（明确的切换意图，不弹确认）。
+let currentVocabTerms = [];
+let vocabPreset = 1;
+let vocabSnapshot = '';   // 进入编辑态时的文本快照（取消恢复用）
+
+function vocabLoadPreset(n) {
+  try { return localStorage.getItem(`vocab-preset-${n}`) || ''; } catch { return ''; }
+}
+function vocabSavePreset(n, text) {
+  try { localStorage.setItem(`vocab-preset-${n}`, text); } catch { /* 存储被禁 */ }
+}
+
+// 词条数组 → 逗号串（空数组 → ''）
+function vocabJoin(terms) { return terms.join(','); }
+
+// 校验：英文逗号分词；返回 {terms, error}（error 为词典 key 或 null）
+function vocabValidate(text) {
+  if (text.includes('，')) return { terms: null, error: 'vocabErrComma' };
+  const parts = text.split(',');
+  if (parts.some((p) => !p.trim()) && text !== '') return { terms: null, error: 'vocabErrEmptyTerm' };
+  const terms = [...new Set(parts.map((p) => p.trim()))].filter(Boolean);
+  return { terms, error: null };
+}
+
+function vocabRenderView() {
+  const view = $('vocab-view');
+  const terms = currentVocabTerms;
+  if (!terms.length) {
+    view.innerHTML = `<span class="vocab-empty">${esc(t('vocabEmptyTags'))}</span>`;
+  } else {
+    view.innerHTML = terms.map((w) =>
+      `<span class="vocab-tag">${esc(w)}<button type="button" class="vocab-tag-x" data-w="${esc(w)}" title="✕">✕</button></span>`).join('');
+  }
+  document.querySelectorAll('.vp').forEach((b) => {
+    b.classList.toggle('active', +b.dataset.preset === vocabPreset);
+  });
+}
+
+function vocabSetEditState(editing) {
+  $('vocab-view').hidden = editing;
+  $('vocab-edit').hidden = !editing;
+  if (!editing) vocabRenderView();
+}
+
+function vocabPaintHint() {
+  const input = $('vocab-input');
+  const hint = $('vocab-hint');
+  const { terms, error } = vocabValidate(input.value);
+  const changed = input.value !== vocabSnapshot;
+  $('vocab-save').disabled = !changed || !!error;
+  $('vocab-cancel').disabled = !changed;
+  if (error) {
+    hint.textContent = t(error);
+    hint.className = 'vocab-hint error';
+  } else if (terms && terms.length > 100) {
+    hint.textContent = t('vocabWarnMany');
+    hint.className = 'vocab-hint warn';
+  } else if (terms && terms.length) {
+    hint.textContent = tn('vocabCount', { n: terms.length });
+    hint.className = 'vocab-hint';
+  } else {
+    hint.textContent = t('vocabCaseHint');
+    hint.className = 'vocab-hint';
+  }
+}
+
+function vocabEnterEdit() {
+  vocabSnapshot = vocabJoin(currentVocabTerms);
+  $('vocab-input').value = vocabSnapshot;
+  vocabSetEditState(true);
+  vocabPaintHint();
+  $('vocab-input').focus();
+}
+
+function vocabInit() {
+  // view 态：点击进入编辑；标签 ✕ 单删（改词条后立即写回当前预设——
+  // view 态的删除视为"已保存"操作，与编辑态的保存/取消语义区分）
+  $('vocab-view').addEventListener('click', (e) => {
+    const x = e.target.closest('.vocab-tag-x');
+    if (x) {
+      currentVocabTerms = currentVocabTerms.filter((w) => w !== x.dataset.w);
+      vocabSavePreset(vocabPreset, vocabJoin(currentVocabTerms));
+      vocabRenderView();
+      return;
+    }
+    vocabEnterEdit();
+  });
+  $('vocab-view').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') vocabEnterEdit();
+  });
+
+  const input = $('vocab-input');
+  input.addEventListener('input', vocabPaintHint);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !$('vocab-save').disabled) {
+      e.preventDefault();
+      $('vocab-save').click();
+    } else if (e.key === 'Escape') {
+      $('vocab-cancel').click();
+    }
+  });
+
+  $('vocab-save').addEventListener('click', () => {
+    const { terms, error } = vocabValidate(input.value);
+    if (error) return;
+    currentVocabTerms = terms;
+    vocabSavePreset(vocabPreset, vocabJoin(terms));
+    vocabSetEditState(false);
+  });
+  $('vocab-cancel').addEventListener('click', () => {
+    currentVocabTerms = vocabValidate(vocabSnapshot).terms || [];
+    vocabSetEditState(false);
+  });
+
+  // 预设切换：未保存修改 = 放弃并加载目标预设
+  document.querySelectorAll('.vp').forEach((b) => {
+    b.addEventListener('click', () => {
+      const n = +b.dataset.preset;
+      if (n === vocabPreset) return;
+      vocabPreset = n;
+      currentVocabTerms = vocabValidate(vocabLoadPreset(n)).terms || [];
+      if (!$('vocab-edit').hidden) { // 编辑态切换：重置编辑区为新预设
+        vocabSnapshot = vocabJoin(currentVocabTerms);
+        input.value = vocabSnapshot;
+        vocabPaintHint();
+      }
+      vocabRenderView();
+    });
+  });
+
+  // 导入：csv 宽容（逗号/换行都收），txt 严格（单行英文逗号）
+  $('vocab-import').addEventListener('click', () => $('vocab-file').click());
+  $('vocab-file').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const text = (await file.text()).trim();
+      let terms;
+      if (file.name.toLowerCase().endsWith('.txt')) {
+        if (text.includes('\n')) throw new Error(t('vocabErrTxtFormat'));
+        if (text.includes('，')) throw new Error(t('vocabErrComma'));
+        terms = text.split(',').map((s) => s.trim()).filter(Boolean);
+      } else { // csv：行或逗号分隔都接受（Excel 导出的每行一词/一行多词）
+        if (text.includes('，')) throw new Error(t('vocabErrComma'));
+        terms = text.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
+      }
+      if (!terms.length) throw new Error(t('vocabErrTxtFormat'));
+      terms = [...new Set(terms)];
+      input.value = terms.join(',');
+      vocabPaintHint();
+    } catch (err) {
+      toast(t('vocabErrFile', { msg: err.message }), true);
+    }
+  });
+
+  // 初始化：默认预设 1
+  currentVocabTerms = vocabValidate(vocabLoadPreset(1)).terms || [];
+  vocabRenderView();
 }
 
 // ---- 上传 ----
@@ -555,6 +748,7 @@ async function startTranscribe() {
     n_threads: $('opt-threads').value || '0',
     n_ctx: $('opt-ctx').value || '0',
     chunk_min: $('opt-chunk').value || '0',
+    vocabulary: vocabJoin(currentVocabTerms), // 英文逗号串，服务端分词清洗
   };
 
   const btn = $('start-btn');
@@ -1163,4 +1357,5 @@ $('lang-btn').addEventListener('click', () => {
 
 $('dz-hint').textContent = t('dzHint');
 applyStaticTexts();
+vocabInit();
 poll();

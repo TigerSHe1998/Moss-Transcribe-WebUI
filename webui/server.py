@@ -98,6 +98,7 @@ def create_app(model_path: str) -> FastAPI:
         n_threads: int = Form(0),
         n_ctx: int = Form(0),
         chunk_min: int = Form(0),
+        vocabulary: str = Form(""),
     ):
         if timestamps not in ("none", "auto", "segment"):
             raise HTTPException(400, f"不支持的时间戳选项 {timestamps!r}，可选: none/auto/segment")
@@ -109,6 +110,11 @@ def create_app(model_path: str) -> FastAPI:
             raise HTTPException(400, "n_threads / n_ctx 不能为负数")
         if chunk_min != 0 and not 1 <= chunk_min <= 180:
             raise HTTPException(400, "分段时长须为 0（关闭）或 1-180 分钟")
+        # 热词：英文逗号分隔的字符串 → 清洗后的词条数组（去空项/去重，保序）
+        if "，" in vocabulary:
+            raise HTTPException(400, "热词请使用英文逗号分隔")
+        vocab_terms = [t for t in (s.strip() for s in vocabulary.split(",")) if t]
+        vocab_terms = list(dict.fromkeys(vocab_terms))
 
         if engine.state == "error":
             raise HTTPException(409, f"模型当前不可用: {engine.error}，请先切换设备重新加载")
@@ -145,6 +151,7 @@ def create_app(model_path: str) -> FastAPI:
                 "n_threads": n_threads,
                 "n_ctx": n_ctx,
                 "chunk_min": chunk_min,
+                "vocabulary": vocab_terms,
             }
             jobs = await run_in_threadpool(
                 engine.submit_audio, dest, file.filename or dest.name, params)

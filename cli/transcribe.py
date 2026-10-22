@@ -427,6 +427,7 @@ def make_fields(args) -> dict:
         "n_threads": str(args.threads),
         "n_ctx": str(args.n_ctx),
         "chunk_min": str(args.autosplit),
+        "vocabulary": args.vocabulary_terms,  # 英文逗号串，服务端分词清洗
     }
 
 
@@ -534,6 +535,12 @@ def parse_args(argv):
                    help="speaker diarization (default: on)")
     p.add_argument("--autosplit", type=int, default=0, metavar="MIN",
                    help="auto-split long audio into MIN-minute chunks, 0 = off (default: 0)")
+    p.add_argument("--vocabulary", metavar="TERMS",
+                   help="comma-separated hotword terms to bias spelling, "
+                        'e.g. --vocabulary "GGUF,ggml"')
+    p.add_argument("--vocabulary-file", metavar="FILE",
+                   help="load hotwords from a .csv (commas or newlines) or .txt "
+                        "(single line, comma-separated) file")
     p.add_argument("--kv-cache-type", choices=["auto", "f32", "f16"], default="auto",
                    help="KV cache type (default: auto)")
     p.add_argument("--n-ctx", type=int, default=131072, metavar="N",
@@ -555,6 +562,34 @@ def parse_args(argv):
     return p.parse_args(argv)
 
 
+def resolve_vocabulary(args) -> str:
+    """--vocabulary / --vocabulary-file → 英文逗号串（已清洗去重）。
+    csv 宽容（逗号或换行分隔），txt 严格（单行英文逗号）。"""
+    texts = []
+    if args.vocabulary:
+        texts.append(args.vocabulary)
+    if args.vocabulary_file:
+        p = Path(args.vocabulary_file)
+        if not p.is_file():
+            die(EXIT_USAGE, f"vocabulary file not found: {p}")
+        text = p.read_text(encoding="utf-8-sig", errors="replace").strip()
+        if p.suffix.lower() == ".txt" and "\n" in text:
+            die(EXIT_USAGE, "vocabulary txt must be a single line of comma-separated terms")
+        texts.append(text)
+    for text in texts:
+        if "，" in text:
+            die(EXIT_USAGE, "vocabulary terms must be separated by ASCII commas (,)")
+    terms = []
+    for text in texts:
+        terms.extend(s.strip() for s in text.split(","))
+    terms = list(dict.fromkeys(t for t in terms if t))
+    if not all(terms):
+        die(EXIT_USAGE, "vocabulary contains empty terms (consecutive/leading/trailing commas)")
+    if len(terms) > 100:
+        print(f"warning: {len(terms)} hotwords is a lot — may degrade model performance", file=sys.stderr)
+    return ",".join(terms)
+
+
 def validate(args) -> list | None:
     """返回待转录文件列表；--list-backend 返回 None（不做文件检查）。"""
     if not 1 <= args.port <= 65535:
@@ -565,6 +600,7 @@ def validate(args) -> list | None:
         die(EXIT_USAGE, "--n-ctx must be 0-131072")
     if args.threads < 0:
         die(EXIT_USAGE, "--threads must be >= 0")
+    args.vocabulary_terms = resolve_vocabulary(args)
     kinds = {"txt": ["txt"], "srt": ["srt"], "json": ["json"],
              "all": ["txt", "srt", "json"]}[args.output]
     if "srt" in kinds and args.timestamp == "none":

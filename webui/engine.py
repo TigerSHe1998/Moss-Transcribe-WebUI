@@ -221,6 +221,14 @@ class Engine:
         return self._supports_diarize
 
     @property
+    def supports_vocabulary(self) -> bool:
+        """热词（上游 0.4.0 vocabulary）：Moss 新版模型支持。"""
+        try:
+            return bool(self._model and self._model.supports("vocabulary"))
+        except Exception:
+            return False
+
+    @property
     def max_audio_ms(self) -> Optional[int]:
         if self._limits and self._limits["effective_max_audio_ms"] > 0:
             return self._limits["effective_max_audio_ms"]
@@ -320,6 +328,7 @@ class Engine:
         if self._caps is not None:
             caps = _jsonable(asdict(self._caps))
             caps["supports_diarization"] = self._supports_diarize
+            caps["supports_vocabulary"] = self.supports_vocabulary
 
         with self._jobs_lock:
             active = sum(1 for j in self._jobs.values()
@@ -611,6 +620,9 @@ class Engine:
                     session.cancel()
                 # Moss 的 language 参数实测无效果（模型内部自行判定语言），
                 # 传固定值仅为满足绑定接口
+                # 热词（vocabulary，上游 0.4.0 统一提示接口）：仅 Moss 新版
+                # 模型支持；旧模型传了会被 native 忽略并警告，这里按能力开关
+                vocab = job.params.get("vocabulary") or None
                 result = session.run(
                     pcm,
                     task="transcribe",
@@ -618,6 +630,7 @@ class Engine:
                     timestamps=job.params.get("timestamps", "segment"),
                     diarize=job.params.get("diarize", "on"),
                     keep_special_tags=bool(job.params.get("keep_special_tags")),
+                    **({"vocabulary": vocab} if vocab else {}),
                 )
                 job.result = serialize_result(result)
                 job.status = "done"
