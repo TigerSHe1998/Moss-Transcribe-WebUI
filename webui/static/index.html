@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Moss Transcribe WebUI</title>
 <link rel="icon"
-      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙️</text></svg>">
-<link rel="stylesheet" href="/static/style.css?v=20261010b">
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
+<link rel="stylesheet" href="/static/style.css?v=20261022c">
 </head>
 <body>
 <header>
@@ -25,68 +25,72 @@
 
 <main>
   <aside>
-    <div class="card">
-      <h2 data-i18n="h2Device">推理设备</h2>
-      <label class="field"><span data-i18n="lblDevice">设备</span>
-        <select id="device-select">
-          <option value="auto" data-i18n="autoSelect">自动选择</option>
-        </select>
-      </label>
-      <button id="reload-btn" class="btn secondary" data-i18n="btnReload">切换设备（重载模型）</button>
-      <p id="device-note" class="note"></p>
-    </div>
+    <div class="card console">
 
-    <div class="card">
-      <h2 data-i18n="h2Settings">转录设置</h2>
-      <label class="field"><span data-i18n="lblTimestamps">时间戳</span>
-        <select id="opt-timestamps">
-          <option value="segment" data-i18n="optSegment">分段</option>
-          <option value="none" data-i18n="optNone">无</option>
-        </select>
-      </label>
-      <label class="field"><span data-i18n="lblDiarize">说话人分离</span>
-        <select id="opt-diarize">
-          <option value="on" data-i18n="optOn">开启</option>
-          <option value="off" data-i18n="optOff">关闭</option>
-        </select>
-      </label>
-      <label class="field"><span data-i18n="lblChunk">长音频自动分段</span>
-        <select id="opt-chunk">
-          <option value="0" data-i18n="chunkOff">关闭</option>
-          <option value="15" data-i18n="chunk15">15分钟（推荐显存 8G）</option>
-          <option value="30" data-i18n="chunk30">30分钟（推荐显存 12G）</option>
-          <option value="45" data-i18n="chunk45">45分钟（推荐显存 16G）</option>
-          <option value="60" data-i18n="chunk60">60分钟（推荐显存 20G）</option>
-        </select>
-      </label>
-      <p class="note" data-i18n="noteChunk">显存不足时，可开启音频自动分段降低显存压力；自动分段产生的转录结果之间说话人序号和别名不会同步，需手动设置。</p>
-      <details>
-        <summary data-i18n="advanced">高级设置</summary>
-        <label class="field"><span data-i18n="lblKv">KV 缓存类型</span>
-          <select id="opt-kv">
-            <option value="auto">auto</option>
-            <option value="f32">f32</option>
-            <option value="f16">f16</option>
+      <section class="cs">
+        <h2 data-i18n="h2Device">推理设备</h2>
+        <label class="field"><span data-i18n="lblDevice">设备</span>
+          <select id="device-select">
+            <option value="auto" data-i18n="autoSelect">自动选择</option>
           </select>
         </label>
-        <label class="field"><span data-i18n="lblThreads">CPU 线程数（0 = 默认）</span>
-          <input id="opt-threads" type="number" min="0" max="128" value="0">
-        </label>
-        <label class="field"><span data-i18n="lblCtx">上下文长度 n_ctx（0 = 默认）</span>
-          <input id="opt-ctx" type="number" min="0" step="256" value="0">
-        </label>
-        <p class="note" data-i18n="noteCtx">n_ctx 默认 131072，调小会降低单次音频的时长上限；线程数仅在 CPU 后端生效。</p>
-      </details>
-    </div>
+        <button id="reload-btn" class="btn secondary" data-i18n="btnReload">切换设备（重载模型）</button>
+        <p id="device-note" class="note"></p>
+      </section>
 
-    <div class="card">
-      <h2 data-i18n="h2Info">运行信息</h2>
-      <div id="info-body" class="note">—</div>
-    </div>
+      <section class="cs">
+        <h2 data-i18n="h2Settings">转录设置</h2>
+        <label class="field"><span data-i18n="lblTimestamps">时间戳</span>
+          <select id="opt-timestamps">
+            <option value="segment" data-i18n="optSegment">分段</option>
+            <option value="none" data-i18n="optNone">无</option>
+          </select>
+        </label>
+        <label class="field"><span data-i18n="lblDiarize">说话人分离</span>
+          <select id="opt-diarize">
+            <option value="on" data-i18n="optOn">开启</option>
+            <option value="off" data-i18n="optOff">关闭</option>
+          </select>
+        </label>
+        <label class="field"><span data-i18n="lblChunk">长音频自动分段</span>
+          <select id="opt-chunk">
+            <option value="0" data-i18n="chunkOff">关闭</option>
+            <option value="15" data-i18n="chunk15">15分钟（推荐显存 8G）</option>
+            <option value="30" data-i18n="chunk30">30分钟（推荐显存 12G）</option>
+            <option value="45" data-i18n="chunk45">45分钟（推荐显存 16G）</option>
+            <option value="60" data-i18n="chunk60">60分钟（推荐显存 20G）</option>
+          </select>
+        </label>
+        <p class="note" data-i18n="noteChunk">显存不足时，可开启音频自动分段降低显存压力；自动分段产生的转录结果之间说话人序号和别名不会同步，需手动设置。</p>
+        <details>
+          <summary data-i18n="advanced">高级设置</summary>
+          <label class="field"><span data-i18n="lblKv">KV 缓存类型</span>
+            <select id="opt-kv">
+              <option value="auto">auto</option>
+              <option value="f32">f32</option>
+              <option value="f16">f16</option>
+            </select>
+          </label>
+          <label class="field"><span data-i18n="lblThreads">CPU 线程数（0 = 默认）</span>
+            <input id="opt-threads" type="number" min="0" max="128" value="0">
+          </label>
+          <label class="field"><span data-i18n="lblCtx">上下文长度 n_ctx（0 = 默认）</span>
+            <input id="opt-ctx" type="number" min="0" step="256" value="0">
+          </label>
+          <p class="note" data-i18n="noteCtx">n_ctx 默认 131072，调小会降低单次音频的时长上限；线程数仅在 CPU 后端生效。</p>
+        </details>
+      </section>
 
-    <div class="card">
-      <h2 data-i18n="h2Decl">声明</h2>
-      <p class="note decl" data-i18n-html="declBody">本项目为<strong>完全免费</strong>的 Apache 2.0 协议开源项目，数据不上云，所有计算均在本地进行。唯一发布地址 <a href="https://github.com/TigerSHe1998/Moss-Transcribe-WebUI" target="_blank" rel="noopener">TigerSHe1998/Moss-Transcribe-WebUI</a>，若您从任何渠道付费获取此软件，请立刻申请退款。</p>
+      <section class="cs">
+        <h2 data-i18n="h2Info">运行信息</h2>
+        <div id="info-body" class="note info-lines">—</div>
+      </section>
+
+      <section class="cs cs-decl">
+        <h2 data-i18n="h2Decl">声明</h2>
+        <p class="note decl" data-i18n-html="declBody">本项目为<strong>完全免费</strong>的 Apache 2.0 协议开源项目，数据不上云，所有计算均在本地进行。唯一发布地址 <a href="https://github.com/TigerSHe1998/Moss-Transcribe-WebUI" target="_blank" rel="noopener">TigerSHe1998/Moss-Transcribe-WebUI</a>，若您从任何渠道付费获取此软件，请立刻申请退款。</p>
+      </section>
+
     </div>
   </aside>
 
@@ -100,6 +104,28 @@
         </label>
       </h2>
       <div id="dropzone" tabindex="0">
+        <svg class="dz-wave" viewBox="0 0 123 32" aria-hidden="true">
+          <rect x="2" y="13" width="2" height="6"/><rect x="5" y="11" width="2" height="10"/>
+          <rect x="8" y="8" width="2" height="16"/><rect x="11" y="11" width="2" height="10"/>
+          <rect x="14" y="7" width="2" height="18"/><rect x="17" y="4" width="2" height="24"/>
+          <rect x="20" y="9" width="2" height="14"/><rect x="23" y="2" width="2" height="28"/>
+          <rect x="26" y="6" width="2" height="20"/><rect x="29" y="10" width="2" height="12"/>
+          <rect x="32" y="4" width="2" height="24"/><rect x="35" y="7" width="2" height="18"/>
+          <rect x="38" y="12" width="2" height="8"/><rect x="41" y="9" width="2" height="14"/>
+          <rect x="44" y="5" width="2" height="22"/><rect x="47" y="1" width="2" height="30"/>
+          <rect x="50" y="5" width="2" height="22"/><rect x="53" y="10" width="2" height="12"/>
+          <rect x="56" y="7" width="2" height="18"/><rect x="59" y="3" width="2" height="26"/>
+          <rect x="62" y="9" width="2" height="14"/><rect x="65" y="12" width="2" height="8"/>
+          <rect x="68" y="8" width="2" height="16"/><rect x="71" y="4" width="2" height="24"/>
+          <rect x="74" y="2" width="2" height="28"/><rect x="77" y="6" width="2" height="20"/>
+          <rect x="80" y="11" width="2" height="10"/><rect x="83" y="8" width="2" height="16"/>
+          <rect x="86" y="4" width="2" height="24"/><rect x="89" y="7" width="2" height="18"/>
+          <rect x="92" y="11" width="2" height="10"/><rect x="95" y="9" width="2" height="14"/>
+          <rect x="98" y="5" width="2" height="22"/><rect x="101" y="3" width="2" height="26"/>
+          <rect x="104" y="7" width="2" height="18"/><rect x="107" y="11" width="2" height="10"/>
+          <rect x="110" y="12" width="2" height="8"/><rect x="113" y="10" width="2" height="12"/>
+          <rect x="116" y="8" width="2" height="16"/><rect x="119" y="12" width="2" height="8"/>
+        </svg>
         <div class="dz-title" data-i18n="dzTitle">拖拽文件到此处，或点击选择</div>
         <div class="dz-hint" id="dz-hint" data-i18n="dzHint"></div>
         <input id="file-input" type="file"
@@ -118,11 +144,15 @@
       <button id="start-btn" class="btn primary" disabled data-i18n="btnStart">开始转录</button>
     </div>
 
+    <div id="jobs-empty" class="jobs-empty" hidden>
+      <div class="je-title" data-i18n="jobsEmptyTitle">还没有转录任务</div>
+      <div class="je-hint" data-i18n="jobsEmptyHint">拖入音频或视频文件，开始第一次转录</div>
+    </div>
     <div id="jobs"></div>
   </section>
 </main>
 
 <div id="toast" hidden></div>
-<script src="/static/app.js?v=20261010g"></script>
+<script src="/static/app.js?v=20261022c"></script>
 </body>
 </html>

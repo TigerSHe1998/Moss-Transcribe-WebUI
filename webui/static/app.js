@@ -3,8 +3,8 @@
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g,
   (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const SPEAKER_COLORS = ['#6366f1', '#059669', '#d97706', '#dc2626',
-  '#7c3aed', '#0891b2', '#db2777', '#65a30d'];
+const SPEAKER_COLORS = ['#2f6b4c', '#3a5f9e', '#7d4f9e', '#b05a2f',
+  '#a83a63', '#2b7f8a', '#8a6408', '#5b6570'];
 
 // ---- 界面语言（i18n）----
 // 词典值支持 {token} 占位，t(key, params) 替换。服务端生成的错误详情
@@ -77,6 +77,8 @@ const I18N = {
     toastOpFail: '操作失败: {msg}', toastWaitJobs: '请等待任务结束再切换设备',
     toastReloading: '开始重载模型…', toastSwitchFail: '切换失败: {msg}',
     secOnly: '{v} 秒', minSec: '{m} 分 {s} 秒', hourMin: '{h} 小时 {m} 分',
+    jobsEmptyTitle: '还没有转录任务',
+    jobsEmptyHint: '拖入音频或视频文件，开始第一次转录',
   },
   en: {
     langBtn: '中文', langBtnTitle: 'Switch interface language',
@@ -142,6 +144,8 @@ const I18N = {
     toastOpFail: 'Operation failed: {msg}', toastWaitJobs: 'Wait for running jobs to finish before switching devices',
     toastReloading: 'Reloading model…', toastSwitchFail: 'Switch failed: {msg}',
     secOnly: '{v}s', minSec: '{m}m {s}s', hourMin: '{h}h {m}m',
+    jobsEmptyTitle: 'No jobs yet',
+    jobsEmptyHint: 'Drop an audio or video file to start your first transcription',
   },
 };
 
@@ -674,7 +678,8 @@ function wirePlayer(card, j) {
   let pendingSeek = null; // preload=none 下 metadata 未加载时先记住目标位置
 
   const paintBar = (pct) => {
-    seek.style.background = `linear-gradient(to right, var(--green) ${pct}%, #e5e7eb ${pct}%)`;
+    // 填充/轨道色走 CSS 变量，随主题走（style.css 的 --moss / --track）
+    seek.style.background = `linear-gradient(to right, var(--moss) ${pct}%, var(--track) ${pct}%)`;
   };
   paintBar(0);
 
@@ -761,12 +766,17 @@ function wirePlayer(card, j) {
   });
   audio.addEventListener('play', () => {
     toggle.textContent = '⏸';
+    toggle.classList.add('playing'); // 供 CSS 切换播放/暂停图标
     if (activeAudio && activeAudio !== audio) activeAudio.pause();
     activeAudio = audio;
   });
-  audio.addEventListener('pause', () => { toggle.textContent = '▶'; });
+  audio.addEventListener('pause', () => {
+    toggle.textContent = '▶';
+    toggle.classList.remove('playing');
+  });
   audio.addEventListener('ended', () => {
     toggle.textContent = '▶';
+    toggle.classList.remove('playing');
     seek.value = 0;
     paintBar(0);
     segEls.forEach((el) => el.classList.remove('active'));
@@ -843,6 +853,9 @@ function wirePlayer(card, j) {
 
 function renderJobs() {
   const wrap = $('jobs');
+  // 空状态提示（#jobs-empty 是 #jobs 的兄弟节点，不在 keyed 渲染区内）
+  const emptyEl = $('jobs-empty');
+  if (emptyEl) emptyEl.hidden = jobs.length > 0;
   const seen = new Set();
   for (const j of jobs) {
     seen.add(j.id);
