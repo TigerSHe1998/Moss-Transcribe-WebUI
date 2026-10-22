@@ -13,9 +13,19 @@ const SPEAKER_COLORS = ['#2f6b4c', '#3a5f9e', '#7d4f9e', '#b05a2f',
 let lang = 'zh';
 try { if (localStorage.getItem('lang') === 'en') lang = 'en'; } catch { /* 存储被禁 */ }
 
+// ---- 主题（dark mode）----
+// data-theme 落在 <html> 上（CSS 变量覆盖 + color-scheme 原生控件跟随），
+// 偏好存 localStorage，默认浅色
+let theme = 'light';
+try { if (localStorage.getItem('theme') === 'dark') theme = 'dark'; } catch { /* 存储被禁 */ }
+function applyTheme() {
+  document.documentElement.dataset.theme = theme;
+  $('theme-btn').title = theme === 'dark' ? t('themeBtnLight') : t('themeBtnDark');
+}
+
 const I18N = {
   zh: {
-    langBtn: 'English', langBtnTitle: '切换界面语言',
+    langBtn: 'English', langBtnTitle: '切换界面语言', themeBtnDark: '切换到深色主题', themeBtnLight: '切换到浅色主题',
     chipInit: '初始化…', chipReady: '● 已就绪 · {name}', chipLoading: '模型加载中…',
     chipError: '✕ 模型不可用: {msg}', unknown: '未知错误',
     memBarText: '已用 {used} / {total}', memBarTitle: '{name} · 可用 {free} ({pct}% 已用)',
@@ -92,7 +102,7 @@ const I18N = {
     jobsEmptyHint: '拖入音频或视频文件，开始第一次转录',
   },
   en: {
-    langBtn: '中文', langBtnTitle: 'Switch interface language',
+    langBtn: '中文', langBtnTitle: 'Switch interface language', themeBtnDark: 'Switch to dark theme', themeBtnLight: 'Switch to light theme',
     chipInit: 'Initializing…', chipReady: '● Ready · {name}', chipLoading: 'Loading model…',
     chipError: '✕ Model unavailable: {msg}', unknown: 'unknown error',
     memBarText: '{used} / {total} used', memBarTitle: '{name} · {free} free ({pct}% used)',
@@ -1362,4 +1372,10 @@ $('lang-btn').addEventListener('click', () => {
 $('dz-hint').textContent = t('dzHint');
 applyStaticTexts();
 vocabInit();
+applyTheme();
+$('theme-btn').addEventListener('click', () => {
+  theme = theme === 'dark' ? 'light' : 'dark';
+  try { localStorage.setItem('theme', theme); } catch { /* 存储被禁 */ }
+  applyTheme();
+});
 poll();
